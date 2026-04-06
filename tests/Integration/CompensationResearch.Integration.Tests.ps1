@@ -87,6 +87,7 @@ Describe 'Invoke-CompensationResearch — skip explicit rates' {
             Description = ''
             Title       = 'Senior Developer'
             Company     = 'TestCo'
+            RateEstimate = $null
         }
         Invoke-CompensationResearch -Listings @($listing) -DbPath $script:TempDb | Out-Null
 
@@ -125,6 +126,7 @@ VALUES (@run, 'product manager', 'norateco', 'Indeed', 'Enterprise Contract', 1,
             Description = ''
             Title       = 'Product Manager'
             Company     = 'NoRateCo'
+            RateEstimate = $null          # property must exist for Invoke-CompensationResearch to set it
         }
         Invoke-CompensationResearch -Listings @($listing) -DbPath $script:FreshDb | Out-Null
 
@@ -146,6 +148,7 @@ DELETE FROM compensation_estimates WHERE listing_id = @lid
             Description = ''
             Title       = 'Product Manager'
             Company     = 'NoRateCo'
+            RateEstimate = $null
         }
         $result = Invoke-CompensationResearch -Listings @($listing) -DbPath $script:FreshDb
         $result[0].RateEstimate | Should -Be 'No data found'
@@ -187,6 +190,7 @@ VALUES (@lid, 80, 100, 'High', 'Glassdoor', date('now'), datetime('now'))
             Description = ''
             Title       = 'Data Analyst'
             Company     = 'CacheCo'
+            RateEstimate = $null
         }
         Invoke-CompensationResearch -Listings @($listing) -DbPath $script:CacheDb | Out-Null
 
