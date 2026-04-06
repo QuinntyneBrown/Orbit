@@ -7,8 +7,8 @@
 #>
 
 BeforeAll {
-    $pipelineModule  = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-PipelineDb.psm1'
-    $outreachModule  = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-OutreachManagement.psm1'
+    $pipelineModule = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-PipelineDb.psm1'
+    $outreachModule = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-OutreachManagement.psm1'
     Import-Module $pipelineModule -Force
     Import-Module $outreachModule -Force
 
@@ -68,37 +68,35 @@ Describe 'New-OutreachFile' {
         $path = New-OutreachFile -Company 'Gamma Ltd' -Role 'Architect' `
             -MessageText $message -Type 'follow-up' `
             -DbPath $script:TempDb -OutreachDir $script:OutreachDir
-        $content = Get-Content $path -Raw
-        $content.Trim() | Should -Be $message
+        (Get-Content $path -Raw).Trim() | Should -Be $message
     }
 
-    It 'inserts a record into outreach_records' {
+    It 'inserts a record into outreach_records with the correct type' {
         New-OutreachFile -Company 'Delta Co' -Role 'PM' `
             -MessageText 'Outreach message.' -Type 'linkedin-message' `
             -DbPath $script:TempDb -OutreachDir $script:OutreachDir | Out-Null
 
         $row = Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
-SELECT * FROM outreach_records WHERE company = 'Delta Co' AND role = 'PM'
+SELECT type, version FROM outreach_records WHERE company = 'Delta Co' AND role = 'PM'
 "@
-        $row | Should -Not -BeNullOrEmpty
-        $row.type    | Should -Be 'linkedin-message'
-        $row.version | Should -Be 1
+        $row              | Should -Not -BeNullOrEmpty
+        $row.type         | Should -Be 'linkedin-message'
+        $row.version      | Should -Be 1
     }
 
     It 'increments version on second outreach for the same company/role/type' {
         $params = @{
-            Company      = 'VersionCo'
-            Role         = 'Developer'
-            Type         = 'email'
-            DbPath       = $script:TempDb
-            OutreachDir  = $script:OutreachDir
+            Company     = 'VersionCo'
+            Role        = 'Developer'
+            Type        = 'email'
+            DbPath      = $script:TempDb
+            OutreachDir = $script:OutreachDir
         }
         $path1 = New-OutreachFile @params -MessageText 'First message.'
         $path2 = New-OutreachFile @params -MessageText 'Second message.'
 
         $path1 | Should -Not -Be $path2
         (Split-Path $path2 -Leaf) | Should -Match '-v2'
-        $path2 | Should -Not -Be $path1
     }
 
     It 'throws on an invalid type' {
@@ -117,47 +115,42 @@ SELECT * FROM outreach_records WHERE company = 'Delta Co' AND role = 'PM'
 }
 
 Describe 'New-LinkedInMessage' {
-    It 'creates a linkedin-message file' {
-        $path = New-LinkedInMessage -Company 'LinkedIn Test Co' -Role 'Senior Dev' `
-            -CandidateName 'Quinn Brown' `
-            -DbPath $script:TempDb
-        # The module uses its own default OutreachDir; pass it explicitly via New-OutreachFile underneath
-        # We can verify the DB record instead since the file lands in the module default dir
+    # New-LinkedInMessage writes to the module's $script:OutreachDir (content/outreach/).
+    # Tests verify DB record creation and file content via the returned path.
+
+    It 'creates an outreach_records entry with type linkedin-message' {
+        $company = "LI-Test-$(Get-Random)"
+        New-LinkedInMessage -Company $company -Role 'Senior Dev' `
+            -CandidateName 'Quinn Brown' -DbPath $script:TempDb | Out-Null
         $row = Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
-SELECT * FROM outreach_records WHERE company = 'LinkedIn Test Co'
-"@
+SELECT type FROM outreach_records WHERE company = @c
+"@ -SqlParameters @{ c = $company }
         $row.type | Should -Be 'linkedin-message'
     }
 
-    It 'message contains the role and company names' {
-        $path = New-LinkedInMessage -Company 'CompanyX' -Role 'Platform Engineer' `
-            -CandidateName 'Test User' `
-            -DbPath $script:TempDb
-        if (Test-Path $path) {
-            $content = Get-Content $path -Raw
-            $content | Should -Match 'Platform Engineer'
-            $content | Should -Match 'CompanyX'
-        }
+    It 'message file contains the role and company names' {
+        $company = "ContentCheck-$(Get-Random)"
+        $path = New-LinkedInMessage -Company $company -Role 'Platform Engineer' `
+            -CandidateName 'Test User' -DbPath $script:TempDb
+        $content = Get-Content $path -Raw
+        $content | Should -Match 'Platform Engineer'
+        $content | Should -Match $company
     }
 
-    It 'message includes the candidate name in the sign-off' {
-        $path = New-LinkedInMessage -Company 'SignOffCo' -Role 'Dev' `
-            -CandidateName 'Jane Doe' `
-            -DbPath $script:TempDb
-        if (Test-Path $path) {
-            $content = Get-Content $path -Raw
-            $content | Should -Match 'Jane Doe'
-        }
+    It 'message file includes the candidate name in the sign-off' {
+        $company = "SignOff-$(Get-Random)"
+        $path = New-LinkedInMessage -Company $company -Role 'Dev' `
+            -CandidateName 'Jane Doe' -DbPath $script:TempDb
+        $content = Get-Content $path -Raw
+        $content | Should -Match 'Jane Doe'
     }
 
     It 'uses a custom value proposition when provided' {
-        $valueProp = 'I have 10 years of distributed systems experience.'
-        $path = New-LinkedInMessage -Company 'ValuePropCo' -Role 'Architect' `
-            -ValueProp $valueProp -CandidateName 'Dev' `
-            -DbPath $script:TempDb
-        if (Test-Path $path) {
-            $content = Get-Content $path -Raw
-            $content | Should -Match 'distributed systems'
-        }
+        $company = "ValueProp-$(Get-Random)"
+        $path = New-LinkedInMessage -Company $company -Role 'Architect' `
+            -ValueProp 'I have 10 years of distributed systems experience.' `
+            -CandidateName 'Dev' -DbPath $script:TempDb
+        $content = Get-Content $path -Raw
+        $content | Should -Match 'distributed systems'
     }
 }
