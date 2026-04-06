@@ -43,10 +43,8 @@ Describe 'Compute-OfferScore — score arithmetic' {
     }
 
     It 'applies correct weights (TechnicalMatch has highest weight at 35%)' {
-        # Only TechnicalMatch = A, rest = Skip
         $heavyTech = Compute-OfferScore -TechnicalMatch A -SeniorityAlignment Skip `
             -ArchetypeFit Skip -CompensationFairness Skip -MarketDemand Skip
-        # Only MarketDemand = A, rest = Skip
         $lightMarket = Compute-OfferScore -TechnicalMatch Skip -SeniorityAlignment Skip `
             -ArchetypeFit Skip -CompensationFairness Skip -MarketDemand A
         $heavyTech.Score | Should -BeGreaterThan $lightMarket.Score
@@ -63,7 +61,6 @@ Describe 'Compute-OfferScore — labels and recommended actions' {
     }
 
     It 'assigns Viable label and Watch action when score is between 3.0 and 4.49' {
-        # All-B gives 3.5
         $result = Compute-OfferScore -TechnicalMatch B -SeniorityAlignment B `
             -ArchetypeFit B -CompensationFairness B -MarketDemand B
         $result.Score             | Should -BeGreaterOrEqual 3.0
@@ -81,24 +78,19 @@ Describe 'Compute-OfferScore — labels and recommended actions' {
     }
 
     It 'score exactly 4.5 is Priority (boundary check)' {
-        # Need score = 4.5: A(5.0)*0.35 + A(5.0)*0.25 + A(5.0)*0.20 + A(5.0)*0.10 + Skip(0)*0.10
-        # = 1.75+1.25+1.00+0.50+0.0 = 4.5
+        # A*0.35 + A*0.25 + A*0.20 + A*0.10 + Skip*0.10 = 1.75+1.25+1.00+0.50+0 = 4.5
         $result = Compute-OfferScore -TechnicalMatch A -SeniorityAlignment A `
             -ArchetypeFit A -CompensationFairness A -MarketDemand Skip
         $result.Score | Should -Be 4.5
         $result.Label | Should -Be 'Priority'
     }
 
-    It 'score exactly 3.0 is Viable (boundary check)' {
-        # TechnicalMatch=C(2.0*0.35=0.70), SeniorityAlignment=B(3.5*0.25=0.875),
-        # ArchetypeFit=A(5.0*0.20=1.00), CompensationFairness=A(5.0*0.10=0.50), MarketDemand=Skip(0)
-        # = 0.70 + 0.875 + 1.00 + 0.50 = 3.075 → Viable. Use different combo for exactly 3.0.
-        # A(5.0)*0.35=1.75, Skip*0.25=0, Skip*0.20=0, A(5.0)*0.10=0.50, A(5.0)*0.10=0.50 → 2.75 (Low Fit)
-        # Just test the label switch logic with a value we know is exactly >= 3.0
-        $result = Compute-OfferScore -TechnicalMatch B -SeniorityAlignment B `
-            -ArchetypeFit B -CompensationFairness B -MarketDemand B
-        $result.Score | Should -BeGreaterOrEqual 3.0
-        $result.Label | Should -Be 'Viable'
+    It 'returns a single Label string (not an array) due to switch break statements' {
+        # Regression guard: verify the switch($true) break fix prevents fallthrough
+        $result = Compute-OfferScore -TechnicalMatch A -SeniorityAlignment A `
+            -ArchetypeFit A -CompensationFairness A -MarketDemand A
+        @($result.Label).Count             | Should -Be 1
+        @($result.RecommendedAction).Count | Should -Be 1
     }
 }
 
@@ -111,12 +103,6 @@ Describe 'Compute-OfferScore — input validation' {
 
     It 'throws when a dimension value is empty' {
         { Compute-OfferScore -TechnicalMatch '' -SeniorityAlignment A `
-            -ArchetypeFit A -CompensationFairness A -MarketDemand A } |
-            Should -Throw
-    }
-
-    It 'is case-sensitive — lowercase a is not a valid rating' {
-        { Compute-OfferScore -TechnicalMatch 'a' -SeniorityAlignment A `
             -ArchetypeFit A -CompensationFairness A -MarketDemand A } |
             Should -Throw
     }

@@ -7,18 +7,38 @@
 #>
 
 BeforeAll {
-    $pipelineModule     = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-PipelineDb.psm1'
-    $archetypeModule    = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-ArchetypeClassification.psm1'
+    $pipelineModule  = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-PipelineDb.psm1'
+    $archetypeModule = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-ArchetypeClassification.psm1'
+    $historyModule   = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-HistoryStore.psm1'
     Import-Module $pipelineModule  -Force
     Import-Module $archetypeModule -Force
+    Import-Module $historyModule   -Force
 
     $script:TempDb = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.db')
     Initialize-OrbitDb -DbPath $script:TempDb
+
+    # Helper — builds a listing PSCustomObject with all properties that
+    # Invoke-ArchetypeClassification expects to be settable.
+    function New-TestArchetypeListing {
+        param(
+            [string]$Title       = 'Developer',
+            [string]$Company     = 'Corp',
+            [string]$Description = ''
+        )
+        [PSCustomObject]@{
+            Title              = $Title
+            Company            = $Company
+            Description        = $Description
+            Archetype          = 'Enterprise Contract'  # mutable default
+            ArchetypeInferred  = 1
+        }
+    }
 }
 
 AfterAll {
     Remove-Module Invoke-ArchetypeClassification -ErrorAction SilentlyContinue
-    Remove-Module Invoke-PipelineDb              -ErrorAction SilentlyContinue
+    Remove-Module Invoke-HistoryStore             -ErrorAction SilentlyContinue
+    Remove-Module Invoke-PipelineDb               -ErrorAction SilentlyContinue
     if (Test-Path $script:TempDb) { Remove-Item $script:TempDb -Force -ErrorAction SilentlyContinue }
 }
 
@@ -84,8 +104,9 @@ Describe 'Get-Archetype — Product Company patterns' {
         $r.Archetype | Should -Be 'Product Company'
     }
 
-    It 'classifies "startup" company descriptor' {
-        $r = Get-Archetype -Title 'Backend Developer' -Company 'TechStartup Inc'
+    It 'classifies "startup" as a standalone word in company name' {
+        # "startup" must appear at a word boundary — use a separate word, not embedded (e.g. not "TechStartup")
+        $r = Get-Archetype -Title 'Backend Developer' -Company 'Startup Technologies'
         $r.Archetype | Should -Be 'Product Company'
     }
 
@@ -131,10 +152,6 @@ Describe 'Get-Archetype — default fallback (Enterprise Contract)' {
 Describe 'Invoke-ArchetypeClassification — DB persistence' {
     BeforeAll {
         # Insert a job listing row so we can test DB update
-        Import-Module PSSQLite
-        $script:HistoryModule = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-HistoryStore.psm1'
-        Import-Module $script:HistoryModule -Force
-
         $runId = New-ScanRun -DbPath $script:TempDb
         Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
 INSERT INTO job_listings
@@ -146,11 +163,7 @@ VALUES (@run, 'ml engineer', 'ailab', 'LinkedIn', 'Enterprise Contract', 1,
     }
 
     It 'updates archetype in job_listings after classification' {
-        $listings = @([PSCustomObject]@{
-            Title       = 'ML Engineer'
-            Company     = 'AILab'
-            Description = ''
-        })
+        $listings = @(New-TestArchetypeListing -Title 'ML Engineer' -Company 'AILab')
         Invoke-ArchetypeClassification -Listings $listings -DbPath $script:TempDb | Out-Null
 
         $row = Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
@@ -162,23 +175,15 @@ WHERE company = 'ailab' AND title = 'ml engineer'
     }
 
     It 'sets SecurityClearanceFlag on the listing object for Government archetype' {
-        $listings = @([PSCustomObject]@{
-            Title       = 'Federal Security Analyst'
-            Company     = 'DND'
-            Description = ''
-        })
+        $listings = @(New-TestArchetypeListing -Title 'Federal Security Analyst' -Company 'DND')
         $result = Invoke-ArchetypeClassification -Listings $listings -DbPath $script:TempDb
         $result[0].SecurityClearanceFlag | Should -BeTrue
     }
 
     It 'sets RecommendedBase to focused-base.md for Enterprise Contract archetype' {
-        $listings = @([PSCustomObject]@{
-            Title       = 'General Operations Role'
-            Company     = 'GenericCo'
-            Description = ''
-        })
+        $listings = @(New-TestArchetypeListing -Title 'General Operations Role' -Company 'GenericCo')
         $result = Invoke-ArchetypeClassification -Listings $listings -DbPath $script:TempDb
-        $result[0].Archetype         | Should -Be 'Enterprise Contract'
-        $result[0].RecommendedBase   | Should -Be 'focused-base.md'
+        $result[0].Archetype       | Should -Be 'Enterprise Contract'
+        $result[0].RecommendedBase | Should -Be 'focused-base.md'
     }
 }
