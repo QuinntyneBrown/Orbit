@@ -85,8 +85,12 @@ Assert-SessionIntegrity -ProfilePath $profilePath -BaseResumePath $baseResumePat
 # Load profile
 $candidateProfile = Get-Content $profilePath -Raw
 $keywords = @()
-if ($candidateProfile -match '(?s)keywords:\s*\n((\s+-\s+.+\n)+)') {
-    $keywords = $matches[1].Trim() -split '\n' | ForEach-Object { $_.Trim().TrimStart('- ').Trim() }
+# Use \r?\n throughout to handle both CRLF (Windows) and LF (Unix) line endings
+# in profile.yml — a common issue when editors save files with Windows line endings.
+if ($candidateProfile -match '(?s)keywords:\s*\r?\n((\s+-\s+.+\r?\n)+)') {
+    $keywords = $matches[1].Trim() -split '\r?\n' |
+        ForEach-Object { $_.Trim().TrimStart('- ').Trim() } |
+        Where-Object { $_ -ne '' }
 }
 
 $boardsSearched = @()
