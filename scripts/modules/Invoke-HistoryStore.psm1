@@ -183,6 +183,10 @@ $diffBlock
 $($listingBlocks -join "`n")
 "@
 
+    if (-not (Test-Path $ExportDir)) {
+        New-Item -ItemType Directory -Path $ExportDir -Force | Out-Null
+    }
+
     $filename = "$($run.run_date).md"
     $outPath  = Join-Path $ExportDir $filename
     Set-Content -Path $outPath -Value $content -Encoding UTF8

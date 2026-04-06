@@ -36,6 +36,10 @@ WHERE company = @c AND role = @r AND type = @t
     $filename   = "$companySlug-$roleSlug-$Type$suffix.txt"
     $filePath   = Join-Path $OutreachDir $filename
 
+    if (-not (Test-Path $OutreachDir)) {
+        New-Item -ItemType Directory -Path $OutreachDir -Force | Out-Null
+    }
+
     if (Test-Path $filePath) {
         throw "Output file already exists (version collision): $filePath"
     }
