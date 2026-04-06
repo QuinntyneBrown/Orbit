@@ -8,6 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot    = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $newVariant  = Join-Path $repoRoot 'new-variant.ps1'
+$buildResume = Join-Path $repoRoot 'build-resume.ps1'
 $startTime   = Get-Date
 
 $jobs     = @()
@@ -21,16 +22,23 @@ while ($queue.Count -gt 0 -or $jobs.Count -gt 0) {
     while ($queue.Count -gt 0 -and $jobs.Count -lt $MaxJobs) {
         $role = $queue.Dequeue()
         $job  = Start-Job -ScriptBlock {
-            param($Script, $Role)
+            param($NewVariantScript, $BuildScript, $Role)
             $exitCode = 0
             try {
-                & pwsh -NonInteractive -File $Script -Name "$Role" -Notes -Force
+                # Step 1: create the tailored Markdown variant (L2-021)
+                & pwsh -NonInteractive -File $NewVariantScript -Name "$Role" -Notes -Force
                 $exitCode = $LASTEXITCODE
+                if ($exitCode -eq 0) {
+                    # Step 2: build the .docx from the variant (L2-004 / L2-022 AC1)
+                    $variantPath = "content\tailored\resume-$Role.md"
+                    & pwsh -NonInteractive -File $BuildScript -InputFile $variantPath
+                    $exitCode = $LASTEXITCODE
+                }
             } catch {
                 $exitCode = 99
             }
             return @{ Role = $Role; ExitCode = $exitCode }
-        } -ArgumentList $newVariant, $role
+        } -ArgumentList $newVariant, $buildResume, $role
         $jobs += [PSCustomObject]@{ Job = $job; Role = $role; StartTime = (Get-Date) }
         Write-Host "  Started: $role (job $($job.Id))"
     }
