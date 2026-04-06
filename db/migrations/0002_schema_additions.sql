@@ -26,6 +26,9 @@ ALTER TABLE target_accounts ADD COLUMN company TEXT;
 
 -- Feature 06: compensation_estimates — add estimated_at alias for Invoke-CompensationResearch.psm1
 -- (existing researched_date covers this; estimated_at is added for the ON CONFLICT upsert)
-ALTER TABLE compensation_estimates ADD COLUMN estimated_at TEXT NOT NULL DEFAULT (datetime('now'));
+-- SQLite requires a constant expression for ALTER TABLE ADD COLUMN defaults;
+-- datetime('now') is not constant, so use empty string as sentinel (never researched).
+-- The ON CONFLICT upsert in Invoke-CompensationResearch always sets this to datetime('now').
+ALTER TABLE compensation_estimates ADD COLUMN estimated_at TEXT NOT NULL DEFAULT '';
 
 INSERT OR IGNORE INTO schema_migrations(version) VALUES (2);

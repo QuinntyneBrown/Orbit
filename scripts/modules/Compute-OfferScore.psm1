@@ -45,15 +45,15 @@ function Compute-OfferScore {
     $score = [Math]::Round($score, 2)
 
     $label = switch ($true) {
-        ($score -ge 4.5) { 'Priority' }
-        ($score -ge 3.0) { 'Viable'   }
-        default          { 'Low Fit'  }
+        ($score -ge 4.5) { 'Priority'; break }
+        ($score -ge 3.0) { 'Viable';   break }
+        default          { 'Low Fit'         }
     }
 
     $recommendedAction = switch ($true) {
-        ($score -ge 4.5) { 'Tailor' }
-        ($score -ge 3.0) { 'Watch'  }
-        default          { 'Skip'   }
+        ($score -ge 4.5) { 'Tailor'; break }
+        ($score -ge 3.0) { 'Watch';  break }
+        default          { 'Skip'          }
     }
 
     return [PSCustomObject]@{
