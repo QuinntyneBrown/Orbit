@@ -173,9 +173,10 @@ function Write-SearchExport {
         $tag = ''
         if ($_.is_stale)              { $tag += ' [Stale]' }
         if ($_.is_priority_recruiter) { $tag += ' [Priority Recruiter]' }
-        $date = if ($_.posted_date) { $_.posted_date } else { 'Unknown' }
-        $rate = if ($_.rate) { $_.rate } else { 'Rate not listed' }
-        "### $($_.title) — $($_.company)$tag`n`n- **title**: $($_.title)`n- **company**: $($_.company)`n- **source**: $($_.source)`n- **date**: $date`n- **rate**: $rate`n- **url**: $($_.url)`n- **archetype**: $($_.archetype)`n"
+        $date  = if ($_.posted_date) { $_.posted_date } else { 'Unknown' }
+        $rate  = if ($_.rate) { $_.rate } else { 'Rate not listed' }
+        $score = if ($null -ne $_.auto_score) { "$($_.auto_score)" } else { 'N/A' }
+        "### $($_.title) — $($_.company)$tag`n`n- **title**: $($_.title)`n- **company**: $($_.company)`n- **source**: $($_.source)`n- **date**: $date`n- **rate**: $rate`n- **url**: $($_.url)`n- **archetype**: $($_.archetype)`n- **score**: $score`n"
     }
 
     $content = @"
