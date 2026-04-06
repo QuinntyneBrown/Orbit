@@ -58,6 +58,17 @@ if ($existingContent -match '^---') {
     Set-Content $variantOut -Value ($block + $existingContent) -Encoding UTF8 -NoNewline
 }
 
+# L2-001 AC1: Verify all base resume sections are present in the new variant.
+# Extract ## headings from the base and confirm each exists in the variant.
+$baseLines   = Get-Content $sourceBase -Raw
+$variantLines = Get-Content $variantOut -Raw
+$baseSections = [regex]::Matches($baseLines, '(?m)^##\s+(.+)$') | ForEach-Object { $_.Groups[1].Value.Trim() }
+$missingFromVariant = $baseSections | Where-Object { $variantLines -notmatch "##\s+$([regex]::Escape($_))" }
+if ($missingFromVariant) {
+    Write-Warning "Variant is missing sections from the base resume (possible copy failure):"
+    $missingFromVariant | ForEach-Object { Write-Warning "  ## $_" }
+}
+
 Write-Host "Created variant: $variantOut"
 
 if ($Notes) {
@@ -78,6 +89,22 @@ if ($Notes) {
             }
         }
         Copy-Item -Path $notesTemplate -Destination $notesOut -Force
+
+        # L2-002 AC1/AC3: Verify the notes file contains all five required section headings.
+        $requiredSections = @(
+            'Role Snapshot',
+            'Baseline Bullets',
+            'Additional Bullet Bank',
+            'Tailoring Angles',
+            'Keyword Bank'
+        )
+        $notesContent = Get-Content $notesOut -Raw
+        $missingSections = $requiredSections | Where-Object { $notesContent -notmatch "##\s+$([regex]::Escape($_))" }
+        if ($missingSections) {
+            Write-Warning "Notes template is missing required sections — update $notesTemplate to include them:"
+            $missingSections | ForEach-Object { Write-Warning "  ## $_" }
+        }
+
         Write-Host "Created notes: $notesOut"
     }
 }
