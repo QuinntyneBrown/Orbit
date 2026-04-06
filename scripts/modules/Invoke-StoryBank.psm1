@@ -53,6 +53,23 @@ function Add-InterviewStory {
     )
     Import-Module PSSQLite -ErrorAction Stop
 
+    # Spec L2-019 AC1: all STAR fields must be non-empty; keywords require at least one entry
+    foreach ($field in @(
+            @{ Name = 'Title';      Value = $Title      }
+            @{ Name = 'Situation';  Value = $Situation  }
+            @{ Name = 'Task';       Value = $Task       }
+            @{ Name = 'Action';     Value = $Action     }
+            @{ Name = 'Result';     Value = $Result     }
+            @{ Name = 'Reflection'; Value = $Reflection }
+        )) {
+        if ([string]::IsNullOrWhiteSpace($field.Value)) {
+            throw "$($field.Name) is required and must not be empty."
+        }
+    }
+    if ($Keywords.Count -eq 0) {
+        throw "At least one keyword is required for story bank entries."
+    }
+
     $skillsJson   = ConvertTo-Json -InputObject @($Skills)   -Compress
     $keywordsJson = ConvertTo-Json -InputObject @($Keywords) -Compress
 

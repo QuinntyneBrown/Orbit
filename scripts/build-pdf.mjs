@@ -61,6 +61,10 @@ const renderedHtml = marked.parse(markdownBody);
 
 // --- Inject into template ---
 const templateHtml = readFileSync(templatePath, 'utf8');
+if (!templateHtml.includes('{{CONTENT}}')) {
+  console.error('Template is missing {{CONTENT}} placeholder — cannot inject resume content.');
+  process.exit(1);
+}
 const fullHtml = templateHtml.replace('{{CONTENT}}', renderedHtml);
 
 // --- Determine output path ---
