@@ -50,9 +50,8 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
     $proc.WaitForExit()
 }
 
-# Parse ratings from completed form
+# Read content before entering try/finally so we can delete in finally
 $content = Get-Content $tempFile -Raw
-Remove-Item $tempFile -ErrorAction SilentlyContinue
 
 function Parse-Rating {
     param([string]$Content, [string]$DimensionLabel)
