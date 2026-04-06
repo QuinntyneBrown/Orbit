@@ -8,7 +8,7 @@
       - seq_no values are unique and monotonically increasing
       - non-null pdf_path values point to existing files
       - notes values do not start with a backtick or HTML tag
-    Reports violations as: Row id=<n>: <column> -- <reason>
+    Reports violations as: Row id=<n>: <column> — <reason>
     Exits 0 if clean, 1 if any violations found.
 .PARAMETER DbPath
     Path to the SQLite database file. Defaults to data/orbit.db relative to repo root.
@@ -19,19 +19,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Resolve default DbPath relative to repo root (two levels up from scripts/)
+# Resolve default DbPath — script lives in scripts/, so repo root is one level up
 if (-not $DbPath) {
-    $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    # If script is at repo root level, adjust accordingly
-    $candidatePath = Join-Path $PSScriptRoot '..\data\orbit.db'
-    if (Test-Path (Split-Path $candidatePath -Parent)) {
-        $DbPath = (Resolve-Path $candidatePath -ErrorAction SilentlyContinue)?.Path
-        if (-not $DbPath) {
-            $DbPath = Join-Path $PSScriptRoot '..\data\orbit.db'
-        }
-    } else {
-        $DbPath = Join-Path $PSScriptRoot '..\data\orbit.db'
-    }
+    $repoRoot = Split-Path $PSScriptRoot -Parent
+    $DbPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'data\orbit.db'))
 }
 
 Import-Module PSSQLite -ErrorAction Stop
@@ -83,7 +74,7 @@ foreach ($row in $rows) {
         # Treat relative paths as relative to repo root (parent of scripts/)
         if (-not [System.IO.Path]::IsPathRooted($resolvedPath)) {
             $repoRoot = Split-Path $PSScriptRoot -Parent
-            $resolvedPath = Join-Path $repoRoot $resolvedPath
+            $resolvedPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $resolvedPath))
         }
         if (-not (Test-Path $resolvedPath)) {
             $violations.Add("Row id=$($row.id): pdf_path — file not found: $($row.pdf_path)")

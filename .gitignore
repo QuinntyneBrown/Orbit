@@ -1,5 +1,7 @@
 # SQLite database (never commit — contains personal job search data)
 data/orbit.db
+data/orbit.db-wal
+data/orbit.db-shm
 
 # Dependencies
 node_modules/
