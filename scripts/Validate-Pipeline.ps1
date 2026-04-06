@@ -56,7 +56,7 @@ if (-not $rows) {
 $datePattern = '^\d{4}-\d{2}-\d{2}$'
 foreach ($row in $rows) {
     if ($row.applied_date -notmatch $datePattern) {
-        $violations.Add("Row id=$($row.id): applied_date -- value '$($row.applied_date)' does not match YYYY-MM-DD format")
+        $violations.Add("Row id=$($row.id): applied_date — value '$($row.applied_date)' does not match YYYY-MM-DD format")
     }
 }
 
@@ -68,10 +68,10 @@ $prevSeq = $null
 foreach ($row in $rows) {
     $seq = $row.seq_no
     if (-not $seenSeq.Add($seq)) {
-        $violations.Add("Row id=$($row.id): seq_no -- duplicate value $seq")
+        $violations.Add("Row id=$($row.id): seq_no — duplicate value $seq")
     }
     if ($null -ne $prevSeq -and $seq -le $prevSeq) {
-        $violations.Add("Row id=$($row.id): seq_no -- value $seq is not greater than previous $prevSeq (not monotonically increasing)")
+        $violations.Add("Row id=$($row.id): seq_no — value $seq is not greater than previous $prevSeq (not monotonically increasing)")
     }
     $prevSeq = $seq
 }
@@ -86,7 +86,7 @@ foreach ($row in $rows) {
             $resolvedPath = Join-Path $repoRoot $resolvedPath
         }
         if (-not (Test-Path $resolvedPath)) {
-            $violations.Add("Row id=$($row.id): pdf_path -- file not found: $($row.pdf_path)")
+            $violations.Add("Row id=$($row.id): pdf_path — file not found: $($row.pdf_path)")
         }
     }
 }

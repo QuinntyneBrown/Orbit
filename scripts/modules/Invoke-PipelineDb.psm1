@@ -9,7 +9,7 @@
 
 Import-Module PSSQLite -ErrorAction Stop
 
-$script:DefaultDbPath = Join-Path $PSScriptRoot '..\..\data\orbit.db'
+$script:DefaultDbPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\data\orbit.db'))
 
 function Initialize-OrbitDb {
     <#
@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
         Write-Host "Applying migration $version ($($file.Name))..."
         $sql = Get-Content $file.FullName -Raw
         Invoke-SqliteQuery -DataSource $DbPath -Query $sql
+
+        # Record migration as applied
+        Invoke-SqliteQuery -DataSource $DbPath `
+            -Query "INSERT OR IGNORE INTO schema_migrations (version) VALUES (@v)" `
+            -SqlParameters @{ v = $version }
         Write-Host "Migration $version applied."
     }
 }
