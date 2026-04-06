@@ -52,14 +52,15 @@ WHERE listing_id = @lid
 
         # Upsert into compensation_estimates
         Invoke-SqliteQuery -DataSource $DbPath -Query @"
-INSERT INTO compensation_estimates (listing_id, range_low, range_high, confidence, source, researched_date)
-VALUES (@lid, @low, @high, @conf, @src, date('now'))
+INSERT INTO compensation_estimates
+    (listing_id, range_low, range_high, confidence, source, researched_date, estimated_at)
+VALUES (@lid, @low, @high, @conf, @src, date('now'), datetime('now'))
 ON CONFLICT (listing_id) DO UPDATE SET
-    range_low    = excluded.range_low,
-    range_high   = excluded.range_high,
-    confidence   = excluded.confidence,
-    source       = excluded.source,
-    estimated_at = datetime('now'),
+    range_low       = excluded.range_low,
+    range_high      = excluded.range_high,
+    confidence      = excluded.confidence,
+    source          = excluded.source,
+    estimated_at    = datetime('now'),
     researched_date = date('now')
 "@ -SqlParameters @{
             lid  = $listing.Id
