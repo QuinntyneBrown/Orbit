@@ -2,17 +2,17 @@
 
 ## 1. Overview
 
-This feature provides a structured, file-based mechanism for tracking every role applied to through a defined lifecycle of states. The pipeline is maintained as a single Markdown table in `data/pipeline.md`. Each entry links to the originating tailored resume PDF, the application date, compensation details, current status, and optionally to a company research report. Status values are governed by a canonical YAML file to prevent invalid entries.
+This feature provides structured tracking of every role applied to through a defined lifecycle of states. The pipeline is stored in the `pipeline_entries` table in the Orbit SQLite database (`data/orbit.db`). Each row links to the originating tailored resume PDF, the application date, compensation details, current status, and optionally to an offer evaluation record.
 
 **Scope of this feature:**
-- `data/pipeline.md` — the single Markdown table tracking all applications
-- `templates/states.yml` — canonical status enumeration
-- Workflow for adding entries, updating status, and validating the pipeline
+- `pipeline_entries` table — authoritative tracking for all applications
+- `Validate-Pipeline.ps1` — validation script run as a CLI tool or pre-commit hook
+- Workflow for adding entries, updating status, and querying the pipeline
 
 **Requirements satisfied:**
 - L1-003: Track every role through a defined lifecycle with full traceability
-- L2-007: `data/pipeline.md` table with columns: `#`, `Date`, `Company`, `Role`, `Source`, `Status`, `Rate`, `PDF Link`, `Report Link`, `Notes`
-- L2-008: Valid status values defined in `templates/states.yml`; no other values permitted
+- L2-007: `pipeline_entries` table with all required columns
+- L2-008: Status values enforced by CHECK constraint in the database schema
 
 ---
 
@@ -22,51 +22,50 @@ This feature provides a structured, file-based mechanism for tracking every role
 
 ![C4 Context](diagrams/c4_context.png)
 
-The Application Pipeline tracking system interacts with the job seeker directly, with the Document Generation feature (which produces the PDFs linked from pipeline entries), and with the Resume Content Management feature (which produces the tailored Markdown sources). Git provides version control for the pipeline file.
+The Application Pipeline interacts with the candidate directly (via PowerShell scripts), with Document Generation (which produces PDFs linked from entries), and with Resume Content Management (which produces the tailored Markdown sources). The Offer Evaluation feature writes `eval_id` back to pipeline rows.
 
 ### 2.2 C4 Container Diagram
 
 ![C4 Container](diagrams/c4_container.png)
 
-The pipeline system consists of two data containers: `data/pipeline.md` (the tracking table) and `templates/states.yml` (the status vocabulary). Supporting automation may validate the pipeline file against the canonical status list. The Document Generation feature feeds PDF links into new pipeline entries.
+The pipeline system consists of the SQLite database container (`data/orbit.db`) and two automation scripts: the pipeline management script and the validator. The `PSSQLite` PowerShell module bridges scripts to the database.
 
 ### 2.3 C4 Component Diagram
 
 ![C4 Component](diagrams/c4_component.png)
 
-The three key components within the pipeline system are the pipeline table itself, the status model, and the pipeline validator. The validator reads the table and checks each status cell against the canonical status list.
+Key components: the `pipeline_entries` table, the `StatusModel` (enforced by CHECK constraint), and `Validate-Pipeline.ps1`.
 
 ---
 
 ## 3. Component Details
 
-### 3.1 `data/pipeline.md` (Application Pipeline Table)
+### 3.1 `pipeline_entries` Table
 
-A Markdown table updated after every tailored resume build. Each row represents one application.
+Column layout (see `db/schema.sql` for full definition with constraints):
 
-**Columns:**
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| `id` | INTEGER PK | No | Auto-increment surrogate key |
+| `seq_no` | INTEGER UNIQUE | No | Human-visible sequence number |
+| `applied_date` | TEXT (ISO date) | No | Date application was submitted |
+| `company` | TEXT | No | Company name |
+| `role` | TEXT | No | Job title |
+| `source` | TEXT | No | Where the role was found |
+| `status` | TEXT | No | Lifecycle status (CHECK constraint) |
+| `rate` | TEXT | Yes | Compensation figure |
+| `pdf_path` | TEXT | Yes | Relative path to submitted PDF |
+| `eval_id` | INTEGER FK | Yes | FK → `offer_evaluations.id` (most recent) |
+| `notes` | TEXT | Yes | Free-text annotations |
+| `created_at` | TEXT | No | Row creation timestamp |
+| `updated_at` | TEXT | No | Last modification timestamp |
 
-| Column | Description |
-|---|---|
-| `#` | Auto-incrementing sequence number |
-| `Date` | Date the application was submitted (ISO format: `YYYY-MM-DD`) |
-| `Company` | Company name |
-| `Role` | Job title |
-| `Source` | Where the role was found (e.g., LinkedIn, Referral, Indeed) |
-| `Status` | Current lifecycle status — must be a value from `templates/states.yml` |
-| `Rate` | Compensation figure (hourly rate or annual salary) |
-| `PDF Link` | Relative path or filename of the submitted PDF in `exports/` |
-| `Report Link` | Optional relative path to a company research report |
-| `Notes` | Free-text annotations (interview dates, contact names, next steps) |
+### 3.2 Status Model (CHECK Constraint)
 
-### 3.2 `templates/states.yml` (Canonical Status Model)
-
-Defines the exhaustive set of permitted status values. No value outside this list may appear in the `Status` column of `data/pipeline.md`.
-
-**Valid statuses:**
+Valid `status` values, enforced at the database layer:
 
 | Status | Meaning |
-|---|---|
+|--------|---------|
 | `Evaluated` | Role reviewed and deemed worth pursuing |
 | `Applied` | Application submitted |
 | `Responded` | Recruiter or hiring manager has responded |
@@ -76,17 +75,30 @@ Defines the exhaustive set of permitted status values. No value outside this lis
 | `Discarded` | Decided not to pursue after initial evaluation |
 | `SKIP` | Role noted but intentionally skipped without evaluation |
 
-### 3.3 Pipeline Validator
+There is no separate `templates/states.yml` file; the constraint is the authoritative definition.
 
-**Script:** `scripts/Validate-Pipeline.ps1`
+### 3.3 `scripts/Validate-Pipeline.ps1`
 
-Reads `data/pipeline.md`, parses the table, extracts every `Status` cell value, and validates each against the list in `templates/states.yml`. Reports invalid values and exits with a non-zero code. Intended to run after manual edits or as a pre-commit hook.
+Queries `pipeline_entries` and asserts data quality rules not enforced by the DB schema:
 
-Also validates:
-- `Date` column values match `YYYY-MM-DD` format
-- `#` column values are unique and monotonically increasing
-- Status values that contain Markdown formatting or embedded dates (L2-008 AC3)
-- No blank values in required columns (`Date`, `Company`, `Role`, `Source`, `Status`)
+- `applied_date` matches `^\d{4}-\d{2}-\d{2}$`
+- `seq_no` values are unique and monotonically increasing (no gaps in query order)
+- `pdf_path` values, when non-null, point to existing files on disk
+- No `notes` value starts with a backtick or HTML tag (catches Markdown-contaminated cells)
+
+Reports one line per violation: `Row id=<n>: <column> — <reason>`.
+
+### 3.4 `scripts/modules/Invoke-PipelineDb.psm1`
+
+Encapsulates all database operations for the pipeline:
+
+```powershell
+function Add-PipelineEntry { ... }       # INSERT with auto seq_no
+function Update-PipelineStatus { ... }   # UPDATE status + updated_at only
+function Get-PipelineEntries { ... }     # SELECT with optional -Status filter
+function Set-PipelineEvalLink { ... }    # UPDATE eval_id
+function Set-PipelinePdfPath { ... }     # UPDATE pdf_path
+```
 
 ---
 
@@ -98,17 +110,11 @@ Also validates:
 
 ### 4.2 Entity Descriptions
 
-**PipelineTable**
-Represents the entire `data/pipeline.md` file. Contains an ordered list of `PipelineEntry` instances. Has a `validate()` method that checks all entries against the `StatusModel`.
-
 **PipelineEntry**
-Represents a single row in the pipeline table. Contains all column values. Has a `status` property constrained to values in `StatusModel`. The `pdfLink` and `reportLink` are relative paths.
+Maps directly to a `pipeline_entries` row. `status` is constrained by the DB CHECK. `evalId` is a nullable FK to the most recent `offer_evaluations` row for this application.
 
 **StatusModel**
-Loaded from `templates/states.yml`. Provides the authoritative list of valid status strings. Has an `isValid(status)` method used by the validator.
-
-**ApplicationStatus** (enumeration)
-The eight valid status values: `Evaluated`, `Applied`, `Responded`, `Interview`, `Offer`, `Rejected`, `Discarded`, `SKIP`.
+Not a stored entity — it is the CHECK constraint in the schema. The eight valid values are the only authoritative list.
 
 ---
 
@@ -118,19 +124,19 @@ The eight valid status values: `Evaluated`, `Applied`, `Responded`, `Interview`,
 
 ![Sequence Diagram](diagrams/sequence_add_entry.png)
 
-After building a tailored resume PDF (Feature 02), the job seeker opens `data/pipeline.md`, appends a new row with the next sequence number, populates all columns including the relative path to the generated PDF, and commits the change to Git. Initial status is typically `Applied` or `Evaluated`.
+After building a tailored resume PDF (Feature 02), the candidate invokes `Add-PipelineEntry` with the required fields. The module computes the next `seq_no` via `SELECT MAX(seq_no) + 1`, inserts the row, and returns the new `id`. Initial status is typically `Applied` or `Evaluated`.
 
 ### 5.2 Update Application Status
 
 ![Sequence Diagram](diagrams/sequence_update_status.png)
 
-When the application status changes (e.g., a recruiter responds), the job seeker locates the relevant row in `data/pipeline.md`, updates the `Status` cell to a valid value from `templates/states.yml`, updates the `Notes` column as appropriate, and commits the change.
+When the application status changes, the candidate invokes `Update-PipelineStatus -Id <n> -Status Interview`. The module runs `UPDATE pipeline_entries SET status = ?, updated_at = ? WHERE id = ?`. Only `status` and `updated_at` change; all other columns are untouched.
 
 ### 5.3 Validate Pipeline
 
 ![Sequence Diagram](diagrams/sequence_validate_pipeline.png)
 
-The pipeline validator reads `data/pipeline.md` and `templates/states.yml`, parses both, and checks every status value in the table. Valid entries pass silently. Invalid entries are reported with the row number and offending value. The process exits with code `1` if any invalid status is found.
+`Validate-Pipeline.ps1` queries all `pipeline_entries` rows, runs each data-quality assertion, and reports violations. Schema-level violations (bad status values) are caught by the DB before they reach the validator — the validator handles quality rules above the schema layer.
 
 ---
 
@@ -139,42 +145,68 @@ The pipeline validator reads `data/pipeline.md` and `templates/states.yml`, pars
 ### `scripts/Validate-Pipeline.ps1`
 
 ```
-.\scripts\Validate-Pipeline.ps1
+.\scripts\Validate-Pipeline.ps1 [-DbPath <path>]
 ```
 
-No parameters. Always reads `data/pipeline.md` and `templates/states.yml` from the repository root.
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `-DbPath` | No | Path to `data/orbit.db` (default: `data/orbit.db` relative to repo root) |
 
 Exit codes: `0` = all entries valid, `1` = one or more validation failures.
 
-Output on failure: one line per invalid row, format: `Row <#>: <field> — <reason>`.
-
 ---
 
-Automation scripts operating on the pipeline must respect the following implicit contracts:
+**PowerShell module function signatures:**
 
-- **Status constraint:** The `Status` column value must exactly match one of the eight values in `templates/states.yml` (case-sensitive).
-- **Date format:** The `Date` column must use ISO 8601 format: `YYYY-MM-DD`.
-- **PDF Link format:** Must be a relative path resolvable from the repository root, pointing to a file in `exports/`.
-- **Sequence number:** The `#` column must be unique and monotonically increasing.
-- **Table structure:** The pipeline file must be a valid GitHub Flavored Markdown table with exactly ten columns in the order specified in L2-007.
+```powershell
+function Add-PipelineEntry {
+    param (
+        [Parameter(Mandatory)] [string] $Company,
+        [Parameter(Mandatory)] [string] $Role,
+        [Parameter(Mandatory)] [string] $Source,
+        [Parameter(Mandatory)] [string] $AppliedDate,   # YYYY-MM-DD
+        [Parameter(Mandatory)] [string] $Status,
+        [string] $Rate,
+        [string] $PdfPath,
+        [string] $Notes
+    )
+    # Returns: [int] id of the new row
+}
+
+function Update-PipelineStatus {
+    param (
+        [Parameter(Mandatory)] [int]    $Id,
+        [Parameter(Mandatory)] [string] $Status
+    )
+    # Returns: [void]; throws on invalid status (DB CHECK violation)
+}
+
+function Get-PipelineEntries {
+    param (
+        [string] $Status   # Optional filter; returns all if omitted
+    )
+    # Returns: [PSCustomObject[]] one object per matching row
+}
+```
+
+**DB access library:**
+- PowerShell: `PSSQLite` module (`Install-Module PSSQLite`)
+- Node.js: `better-sqlite3` (`npm install better-sqlite3`)
 
 ---
 
 ## 7. Security Considerations
 
-- `data/pipeline.md` may contain salary/rate expectations, recruiter names, and notes about compensation offers. Ensure the Git repository is **private**.
-- The `Rate` column should not contain sensitive negotiation strategy notes — use the `Notes` column cautiously.
-- If the pipeline file is ever shared externally (e.g., printed or exported), review the `Notes` column for personal or confidential content before sharing.
-- `templates/states.yml` contains no sensitive data and is safe to commit to any repository.
+- `data/orbit.db` contains compensation data, recruiter names, and application outcomes. It is gitignored (L2-024) and must never be committed to a public repository.
+- The `PSSQLite` module uses parameterised queries; no raw string interpolation into SQL.
+- `Validate-Pipeline.ps1` is read-only; it never modifies the database.
 
 ---
 
 ## 8. Open Questions
 
 | # | Question | Status |
-|---|---|---|
-| 1 | Should the pipeline validator run as a Git pre-commit hook automatically? | Open |
-| 2 | Should the `PDF Link` column reference absolute paths, relative paths, or just filenames? | Open |
-| 3 | Should a summary view (e.g., count by status) be auto-generated from the pipeline table? | Open |
-| 4 | Should `data/pipeline.md` be split by year once entries exceed a threshold? | Open |
-| 5 | Should the `Report Link` column reference files in a dedicated `data/reports/` directory? | Open |
+|---|----------|--------|
+| 1 | Should `Validate-Pipeline.ps1` run as a Git pre-commit hook automatically? | Open |
+| 2 | Should a summary view (count by status) be generated as a CLI command? | Open |
+| 3 | Should the pipeline table be exportable to Markdown for sharing/printing? | Open |
