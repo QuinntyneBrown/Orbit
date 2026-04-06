@@ -47,21 +47,23 @@ Three independent components handle startup validation, gitignore enforcement ch
 
 - **Check (a) — File Existence:** Resolves `content/base/base-resume.md`. If missing: emit error and halt with non-zero exit code.
 - **Check (b) — Staleness:** Reads filesystem `mtime` of base resume. If older than 90 days from today: emit warning and prompt candidate to confirm continuation. If confirmed, proceed; otherwise halt.
-- **Check (c) — Live Read:** Reads the first 10 lines of the file at runtime to confirm it is not a static summary. Proceeds silently if all checks pass.
+- **Check (c) — Database Readiness:** Opens `data/orbit.db`. If the file does not exist: runs all migrations in `db/migrations/` to initialize the database, then proceeds. If migrations exist that haven't been applied: applies them in version order. If the DB file exists but is unreadable (locked, corrupt): halt with a descriptive error.
+- **Check (d) — Live Read:** Reads the first 10 lines of the base resume at runtime to confirm it is not a static summary. Proceeds silently if all checks pass.
 
 ### Gitignore Enforcer (passive, via `.gitignore`)
 
 - The `.gitignore` file contains entries for all personal data paths (see L2-024).
+- Primary exclusion: `data/orbit.db` — the database file containing all tracking state.
 - A `Check-Gitignore.ps1` utility (optional) can verify none of the protected paths appear in `git status` output.
 - No automated repair; the check is advisory — it surfaces violations for manual resolution.
 
 ### Output Formatter (inside job-search skill)
 
-- Every search run writes a file: `data/search-results/YYYY-MM-DD.md`.
+- Every search run generates a file: `data/search-results/YYYY-MM-DD.md` (delegated to Feature 06's DatedExportWriter).
 - File begins with a YAML front-matter block delimited by `---`.
-- Front-matter fields: `date`, `total_results`, `boards_searched`, `new_listings`, `seen_listings`.
-- Each listing rendered as a Markdown level-3 heading block with labeled fields.
-- Diff summary appended at end of file: new listings since previous dated file.
+- Front-matter values sourced from the `scan_runs` row for the current run.
+- Each listing rendered from `job_listings WHERE scan_run_id = <current>` as a Markdown level-3 heading block.
+- Diff summary at top of file: computed by Feature 06's DiffGenerator via SQL queries across the two most recent `scan_runs` rows.
 
 ---
 
@@ -75,12 +77,12 @@ Three independent components handle startup validation, gitignore enforcement ch
 
 | Entity | Description |
 |--------|-------------|
-| `StartupValidationResult` | Outcome of all three startup checks. Contains status per check and aggregate pass/fail. |
+| `StartupValidationResult` | Outcome of all four startup checks. Contains status per check and aggregate pass/fail. |
 | `ValidationCheck` | Single check result: name, passed boolean, severity (error/warning), message. |
-| `SearchRunOutput` | A single search run result file with front-matter metadata and listing array. |
-| `FrontMatter` | YAML front-matter block: date, total_results, boards_searched, new_listings, seen_listings. |
-| `JobListing` | Individual job record: title, company, source, date, rate, url, archetype, score. |
-| `GitignoreStatus` | Result of checking that protected paths are absent from git tracking. |
+| `SearchRunOutput` | A single dated Markdown export generated from `scan_runs` + `job_listings` DB queries. |
+| `FrontMatter` | YAML front-matter: `date`, `total_results`, `boards_searched`, `new_listings`, `seen_listings` — all from the `scan_runs` row. |
+| `JobListing` | Maps to `job_listings` DB row; rendered into per-listing Markdown blocks in the export. |
+| `GitignoreStatus` | Result of checking that `data/orbit.db` and other protected paths are absent from git tracking. |
 
 ---
 
@@ -102,10 +104,11 @@ The optional `Check-Gitignore.ps1` script runs `git status` and scans output for
 
 ## 6. Security Considerations
 
-- Personal data files (`data/pipeline.md`, `config/profile.yml`, etc.) are excluded from git tracking via `.gitignore`. Accidental `git add .` commands cannot stage them.
+- `data/orbit.db` contains all tracking state (pipeline, evaluations, search history, recruiter contacts, stories) and is excluded from git tracking via `.gitignore`. A single `git add .` cannot accidentally expose it.
 - The startup validator reads the base resume at runtime — not from a cached summary — ensuring no stale PII is used to represent the candidate.
 - `*.env` exclusion in `.gitignore` prevents API keys or tokens from being committed.
-- The output formatter writes to `data/search-results/` which is also gitignored, preventing search history from leaking company intelligence.
+- The output formatter writes exports to `data/search-results/` which is also gitignored.
+- DB migrations run with `PRAGMA foreign_keys = ON` and `PRAGMA journal_mode = WAL` to prevent partial writes on crash.
 
 ---
 
