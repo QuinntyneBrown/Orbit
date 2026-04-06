@@ -1,0 +1,30 @@
+@startuml sequence_portal_scan
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Portal Scan — Company Career Page Workflow
+
+participant "job-search skill" as skill
+participant "Portal Scanner Module" as scanner
+participant "ATS Detector" as ats
+collections "Career Portals" as portals
+
+skill -> scanner : Execute portal scan\n(--scan-portals)
+scanner -> scanner : Load docs/target-account-list.md
+loop for each target account
+    scanner -> portals : Navigate to career page URL
+    alt Navigation successful
+        portals --> scanner : Career page HTML
+        scanner -> ats : Detect ATS type\nfrom URL pattern
+        ats --> scanner : ATS type\n(Greenhouse/Ashby/Lever/\nWellfound/Workable)
+        scanner -> portals : Apply ATS-specific\nscraping strategy
+        portals --> scanner : Open role listings
+        scanner -> scanner : Filter by keywords\nand location
+    else Navigation failed
+        portals --> scanner : Error (HTTP / timeout)
+        scanner -> scanner : Record FailedScan\n{ target, errorCode, errorMessage }
+    end
+end
+scanner --> skill : Listings + FailedScan records
+
+@enduml

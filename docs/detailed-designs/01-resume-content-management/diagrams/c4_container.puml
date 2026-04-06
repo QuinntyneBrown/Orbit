@@ -1,0 +1,24 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Resume Content Management
+
+Person(user, "Quinntyne Brown", "Job seeker")
+
+System_Boundary(orbit, "Orbit Content Layer") {
+    Container(base, "Base Resume Store", "Filesystem / Markdown", "content/base/ — two canonical base resume files")
+    Container(tailored, "Tailored Variants Store", "Filesystem / Markdown", "content/tailored/ — role-specific customizations")
+    Container(notes, "Notes Store", "Filesystem / Markdown", "content/notes/ — per-role research and keyword notes")
+    Container(outreach, "Outreach Store", "Filesystem / Markdown", "content/outreach/ — messages, emails, follow-ups")
+    Container(templates, "Templates", "Filesystem / Markdown + DOCX + HTML", "templates/ — notes-template.md, reference.docx, resume.html, states.yml")
+}
+
+Rel(user, base, "Edits canonical base files")
+Rel(user, tailored, "Creates tailored variants from base files")
+Rel(user, notes, "Authors notes per role")
+Rel(user, outreach, "Drafts outreach messages")
+Rel(tailored, base, "Derives from")
+Rel(notes, templates, "Must conform to notes-template.md")
+
+@enduml

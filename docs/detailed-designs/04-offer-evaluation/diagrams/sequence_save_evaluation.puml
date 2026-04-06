@@ -1,0 +1,31 @@
+@startuml sequence_save_evaluation
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Save Evaluation — Archive and Persist
+
+participant "Save Invoker" as invoker
+participant "Save-EvaluationReport.psm1" as saver
+participant "File System" as fs
+participant "Pipeline Linker" as linker
+
+invoker -> saver : Save-EvaluationReport\n(sourcePath, company, role)
+saver -> saver : Build target path\ncontent/evaluations/<slug>-eval.md
+saver -> fs : Does target path exist?
+alt File exists
+    fs --> saver : Yes
+    saver -> fs : Rename existing file\n<slug>-eval-<YYYYMMDD>.md
+    fs --> saver : Archive complete
+else File does not exist
+    fs --> saver : No
+end
+saver -> fs : Write new evaluation file\nto target path
+fs --> saver : Write complete
+saver --> invoker : Final saved path
+invoker -> linker : Update-PipelineLink\n(company, role, savedPath)
+linker -> fs : Find matching row\nin data/pipeline.md
+linker -> fs : Replace Report Link\ncolumn value
+fs --> linker : Update written
+linker --> invoker : Pipeline updated
+
+@enduml

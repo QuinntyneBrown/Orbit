@@ -1,0 +1,23 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Role Archetype Classification
+
+Person(candidate, "Candidate", "Reviews archetype-annotated listings")
+
+System_Boundary(orbit, "Orbit Career Management") {
+    Container(psScripts, "PowerShell Scripts", "PowerShell", "Orchestrates the classification pass within the scan pipeline")
+    Container(classifier, "Archetype Classification Module", "PowerShell", "Applies keyword rule set to classify each listing")
+    ContainerDb(ruleConfig, "archetype-rules.json", "JSON Config File", "Ordered keyword rules mapping patterns to archetypes")
+    ContainerDb(scanHistory, "scan-history.tsv", "TSV File", "Listings store; Archetype column populated after classification")
+    ContainerDb(exportFiles, "search-results/", "Markdown Files", "Dated exports showing archetype alongside each listing")
+}
+
+Rel(candidate, psScripts, "Runs scan command")
+Rel(psScripts, classifier, "Passes result set for archetype classification")
+Rel(classifier, ruleConfig, "Reads ordered archetype rule set")
+Rel(classifier, scanHistory, "Writes archetype and flags to each record")
+Rel(classifier, exportFiles, "Archetype surfaced in dated exports")
+
+@enduml

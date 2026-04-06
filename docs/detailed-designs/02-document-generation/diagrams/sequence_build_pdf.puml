@@ -1,0 +1,25 @@
+@startuml sequence_build_pdf
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Build PDF Resume
+
+actor "Quinntyne Brown" as User
+participant "build-pdf.mjs" as Script
+participant "templates/resume.html" as Template
+participant "Playwright\n(Chromium)" as Browser
+participant "exports/" as Output
+
+User -> Script : node build-pdf.mjs <path>
+Script -> Script : Read and parse\nMarkdown to HTML fragment
+Script -> Template : Read HTML template
+Template --> Script : Returns HTML wrapper
+Script -> Script : Inject HTML fragment\ninto template
+Script -> Browser : Launch headless Chromium\nLoad merged HTML page
+Browser --> Script : Page rendered
+Script -> Browser : page.pdf() — export to PDF
+Browser --> Script : PDF buffer
+Script -> Output : Write <basename>.pdf
+Output --> User : PDF ready in exports/
+
+@enduml

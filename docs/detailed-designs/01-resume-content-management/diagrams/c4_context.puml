@@ -1,0 +1,20 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Resume Content Management
+
+Person(user, "Quinntyne Brown", "Job seeker who authors and maintains all resume content")
+
+System(orbit, "Orbit Content Layer", "Version-controlled Markdown files: base resumes, tailored variants, notes, and outreach content")
+
+System_Ext(git, "Git", "Version control for all content files")
+System_Ext(docgen, "Document Generation (Feature 02)", "Consumes Markdown files to produce DOCX and PDF outputs")
+System_Ext(pipeline, "Application Pipeline (Feature 03)", "References tailored resumes; tracks application state")
+
+Rel(user, orbit, "Reads and edits content files")
+Rel(orbit, git, "Committed and version-controlled")
+Rel(docgen, orbit, "Reads base and tailored Markdown files")
+Rel(pipeline, orbit, "Links to tailored resume outputs")
+
+@enduml

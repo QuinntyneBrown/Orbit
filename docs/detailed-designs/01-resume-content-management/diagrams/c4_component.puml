@@ -1,0 +1,21 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Resume Content Management
+
+Container_Boundary(content, "Content Layer") {
+    Component(focused, "quinntyne-brown.md", "Markdown", "Focused base resume — default for most tailored variants")
+    Component(full, "quinntyne-brown-full.md", "Markdown", "Comprehensive base resume — used for roles requiring full history")
+    Component(variant, "TailoredVariant", "Markdown", "Role-specific resume derived from one base file; stored in content/tailored/")
+    Component(notes, "NotesFile", "Markdown", "Per-role notes conforming to notes-template.md; stored in content/notes/")
+    Component(outreach, "OutreachFile", "Markdown/Text", "Messages and emails in content/outreach/; never in content/tailored/")
+    Component(tmpl, "notes-template.md", "Markdown Template", "Defines required sections for all notes files")
+}
+
+Rel(variant, focused, "Derives from (source_base front matter)")
+Rel(variant, full, "Derives from (source_base front matter)")
+Rel(notes, tmpl, "Must conform to template structure")
+Rel(variant, notes, "References during tailoring")
+
+@enduml

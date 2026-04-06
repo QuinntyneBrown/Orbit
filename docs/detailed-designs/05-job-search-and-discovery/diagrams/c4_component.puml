@@ -1,0 +1,22 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title Job Search and Discovery — C4 Component (job-search skill)
+
+Container_Boundary(skill, "job-search skill") {
+    Component(modeRouter, "Mode Router", "Logic", "Parses flags and dispatches to enabled search modes")
+    Component(keywordBuilder, "Keyword Builder", "Logic", "Constructs search queries from profile keywords and geo filter")
+    Component(stalenessChecker, "Staleness Checker", "Logic", "Marks listings posted > 30 days ago as [Stale]")
+    Component(deduplicator, "Deduplicator", "Logic", "Filters listings already present in prior search runs")
+    Component(tagInjector, "Tag Injector", "Logic", "Applies [Priority Recruiter] and [Stale] tags to listing blocks")
+    Component(outputWriter, "Output Writer", "File I/O", "Writes final Markdown file with YAML front-matter to content/job-search/")
+}
+
+Rel(modeRouter, keywordBuilder, "Passes active mode config")
+Rel(keywordBuilder, stalenessChecker, "Passes raw listing results")
+Rel(stalenessChecker, deduplicator, "Passes age-tagged results")
+Rel(deduplicator, tagInjector, "Passes deduplicated results")
+Rel(tagInjector, outputWriter, "Passes fully tagged listing set")
+
+@enduml

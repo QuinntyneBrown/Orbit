@@ -1,0 +1,63 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Application Pipeline Tracking
+
+class PipelineTable {
+    +filePath : String
+    +entries : PipelineEntry[]
+    +validate() : ValidationResult
+    +addEntry(entry : PipelineEntry) : void
+    +updateStatus(seq : Integer, status : String) : void
+}
+
+class PipelineEntry {
+    +seq : Integer
+    +date : String
+    +company : String
+    +role : String
+    +source : String
+    +status : String
+    +rate : String
+    +pdfLink : String
+    +reportLink : String
+    +notes : String
+}
+
+class StatusModel {
+    +filePath : String
+    +validStatuses : String[]
+    +isValid(status : String) : Boolean
+}
+
+enum ApplicationStatus {
+    Evaluated
+    Applied
+    Responded
+    Interview
+    Offer
+    Rejected
+    Discarded
+    SKIP
+}
+
+class ValidationResult {
+    +isValid : Boolean
+    +violations : ValidationViolation[]
+}
+
+class ValidationViolation {
+    +rowNumber : Integer
+    +field : String
+    +invalidValue : String
+    +message : String
+}
+
+PipelineTable "1" *-- "0..*" PipelineEntry
+PipelineTable ..> StatusModel : validates against
+PipelineTable ..> ValidationResult : produces
+ValidationResult "1" *-- "0..*" ValidationViolation
+StatusModel ..> ApplicationStatus : defines
+
+@enduml

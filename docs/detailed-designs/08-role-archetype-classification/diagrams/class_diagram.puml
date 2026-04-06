@@ -1,0 +1,56 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Role Archetype Classification
+
+enum Archetype {
+    EnterpriseContract
+    ProductCompany
+    ConsultingFirm
+    AIInnovation
+    GovernmentPublicSector
+    Unknown
+}
+
+class ArchetypeFlags {
+    +RecommendBaseResume : bool
+    +FlagClearance : bool
+    +Inferred : bool
+}
+
+class ArchetypeResult {
+    +Archetype : Archetype
+    +IsInferred : bool
+    +MatchedRule : string
+}
+
+class ArchetypeRule {
+    +Priority : int
+    +TargetArchetype : Archetype
+    +KeywordPatterns : string[]
+    +Matches(title: string, company: string, description: string) : bool
+}
+
+class ArchetypeRuleSet {
+    +Rules : ArchetypeRule[]
+    +LoadFromFile(path: string) : ArchetypeRuleSet
+    +Classify(listing: JobListing) : ArchetypeResult
+}
+
+class JobListing {
+    +Title : string
+    +Company : string
+    +Description : string
+    +Archetype : Archetype
+    +ArchetypeFlags : ArchetypeFlags
+}
+
+ArchetypeResult --> Archetype
+ArchetypeRule --> Archetype
+ArchetypeRuleSet "1" *-- "many" ArchetypeRule
+JobListing --> Archetype
+JobListing "1" *-- "1" ArchetypeFlags
+ArchetypeRuleSet ..> ArchetypeResult : produces
+
+@enduml

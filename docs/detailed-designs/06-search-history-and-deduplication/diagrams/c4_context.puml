@@ -1,0 +1,17 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Search History and Deduplication
+
+Person(candidate, "Candidate", "Runs job search scans and reviews results")
+
+System(orbit, "Orbit Career Management", "PowerShell + Node.js toolset that searches job boards, persists history, and generates reports")
+
+System_Ext(jobBoards, "Job Boards", "LinkedIn, Indeed, and other public job listing sites")
+
+Rel(candidate, orbit, "Executes scan commands, reviews dated exports")
+Rel(orbit, jobBoards, "Scrapes job listings via job-search skill")
+Rel(orbit, candidate, "Produces scan-history.tsv and dated Markdown exports")
+
+@enduml

@@ -1,0 +1,53 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Job Search and Discovery — Class Diagram
+
+class SearchRun {
+    +date : date
+    +totalResults : int
+    +boardsSearched : string[]
+    +newListings : int
+    +seenListings : int
+}
+
+class JobListing {
+    +title : string
+    +company : string
+    +source : string
+    +date : date
+    +rate : string
+    +url : string
+    +archetype : string
+    +score : float
+    +isStale : bool
+    +isPriorityRecruiter : bool
+}
+
+class TargetAccount {
+    +name : string
+    +careerPageUrl : string
+    +atsType : string
+}
+
+class RecruiterVendor {
+    +name : string
+    +opportunityPageUrl : string
+    +priority : string
+}
+
+class FailedScan {
+    +target : string
+    +errorCode : string
+    +errorMessage : string
+}
+
+SearchRun "1" *-- "0..*" JobListing : contains
+SearchRun "1" *-- "0..*" FailedScan : records
+TargetAccount ..> JobListing : produces
+RecruiterVendor ..> JobListing : produces
+RecruiterVendor ..> FailedScan : may produce
+TargetAccount ..> FailedScan : may produce
+
+@enduml

@@ -1,0 +1,287 @@
+# Job Search and Discovery — Detailed Design
+
+## 1. Overview
+
+Feature 05 automates the discovery of relevant job and contract opportunities by searching public job boards, company career portals, and recruiter-specific boards. Results are surfaced in a standardized Markdown format suitable for pipeline review and downstream evaluation (Feature 04).
+
+**Scope:**
+- L1-005: Automated job discovery matching the candidate profile
+- L2-011: Job board search across LinkedIn, Indeed, Glassdoor, Remote.io, WeWorkRemotely
+- L2-012: Company portal scanner for accounts in `docs/target-account-list.md`
+- L2-013: Recruiter board search for vendors in `docs/recruiter-vendor-list.md`
+- L2-026: Standardized YAML front-matter + listing block output format
+
+**Key design decisions:**
+- Implemented as a Claude Code skill (`job-search`) — browser automation handled by Playwright via the skill runtime
+- Three distinct modes (`--board-search`, `--scan-portals`, `--recruiter-boards`) can be run independently or together
+- Output is always a single Markdown file per run, never appended to existing results
+- Staleness is assessed at render time (> 30 days from posted date) by injecting a `[Stale]` tag
+- Priority recruiter results are flagged `[Priority Recruiter]` in the listing block
+
+---
+
+## 2. Architecture
+
+### 2.1 C4 Context Diagram
+
+![C4 Context](diagrams/c4_context.png)
+
+### 2.2 C4 Container Diagram
+
+![C4 Container](diagrams/c4_container.png)
+
+### 2.3 C4 Component Diagram
+
+![C4 Component](diagrams/c4_component.png)
+
+---
+
+## 3. Component Details
+
+### 3.1 Job Search Skill (Claude Code Skill)
+
+**Skill:** `job-search` (Claude Code skill runtime)
+
+The skill is the primary orchestrator. It accepts mode flags and delegates to three sub-components. It merges results, applies deduplication, and writes the output file.
+
+**Invocation modes:**
+
+| Flag | Description |
+|------|-------------|
+| `--board-search` | Search public job boards |
+| `--scan-portals` | Scan company career portals |
+| `--recruiter-boards` | Search recruiter opportunity pages |
+| *(no flag)* | Run all three modes |
+
+**Target keywords:** `.NET`, `C#`, `Angular`, `Architect`, `Senior`, `Contract`
+
+**Geographic filter:** GTA or Remote Canada
+
+### 3.2 Board Search Module
+
+**Responsibility:** Search LinkedIn, Indeed, Glassdoor, Remote.io, WeWorkRemotely
+
+For each board:
+1. Construct search URL from keyword and location parameters
+2. Navigate and extract listing elements
+3. Parse title, company, posted date, rate, and URL
+4. Mark listings older than 30 days as `[Stale]`
+
+**Supported boards:**
+
+| Board | Notes |
+|-------|-------|
+| LinkedIn | Requires keyword + location filters |
+| Indeed | Supports salary filter where available |
+| Glassdoor | Includes company rating when present |
+| Remote.io | Remote-only board; no location filter |
+| WeWorkRemotely | Remote-only board; no location filter |
+
+### 3.3 Portal Scanner Module
+
+**Responsibility:** Navigate to career pages of accounts listed in `docs/target-account-list.md`
+
+For each company:
+1. Resolve the career page URL from the account list
+2. Detect ATS type (Greenhouse, Ashby, Lever, Wellfound, Workable)
+3. Apply ATS-specific scraping strategy
+4. Extract matching open roles
+
+**Supported ATS platforms:**
+
+| ATS | Detection Method |
+|-----|-----------------|
+| Greenhouse | `boards.greenhouse.io` URL pattern |
+| Ashby | `jobs.ashbyhq.com` URL pattern |
+| Lever | `jobs.lever.co` URL pattern |
+| Wellfound | `wellfound.com/company/*/jobs` pattern |
+| Workable | `apply.workable.com` URL pattern |
+
+Failed scans are collected and listed in the "Failed to scan" section of the output file with an error code.
+
+### 3.4 Recruiter Board Module
+
+**Responsibility:** Search opportunity pages of staffing vendors in `docs/recruiter-vendor-list.md`
+
+Execution order: `Priority: High` vendors are searched first.
+
+**Supported vendors:**
+
+| Vendor | Priority |
+|--------|----------|
+| Procom | High |
+| Systematix | High |
+| Altis | Standard |
+| LeverageTek | Standard |
+| Mindwire | Standard |
+
+Results from priority vendors are flagged `[Priority Recruiter]` in the listing block. Failed vendor scans are listed in the "Failed to scan" section.
+
+### 3.5 Output Formatter
+
+**Responsibility:** Assemble the final Markdown output file
+
+- Writes YAML front-matter with run metadata
+- Groups listings by source
+- Injects `[Stale]`, `[Priority Recruiter]` tags
+- Appends "Failed to scan" section if any errors occurred
+- Writes file to `content/job-search/search-<YYYYMMDD>.md`
+
+---
+
+## 4. Data Model
+
+### 4.1 Class Diagram
+
+![Class Diagram](diagrams/class_diagram.png)
+
+### 4.2 Entity Descriptions
+
+#### SearchRun
+
+Represents a single execution of the job search skill. Persisted as the YAML front-matter of the output file.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | date | Run date |
+| `totalResults` | int | Total listings found |
+| `boardsSearched` | string[] | List of boards/portals scanned |
+| `newListings` | int | Listings not seen in prior runs |
+| `seenListings` | int | Listings already in pipeline |
+
+#### JobListing
+
+Represents a single discovered opportunity.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Job title |
+| `company` | string | Company name |
+| `source` | string | Board, portal, or recruiter name |
+| `date` | date | Posted date |
+| `rate` | string | Rate or "Rate not listed" |
+| `url` | string | Direct link to listing |
+| `archetype` | string | Matched candidate archetype |
+| `score` | number | Auto-scored fit estimate |
+| `isStale` | bool | Posted > 30 days ago |
+| `isPriorityRecruiter` | bool | From a Priority: High vendor |
+
+#### TargetAccount
+
+Represents a company in `docs/target-account-list.md`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Company name |
+| `careerPageUrl` | string | URL of careers page |
+| `atsType` | string | Detected ATS platform |
+
+#### RecruiterVendor
+
+Represents a staffing vendor in `docs/recruiter-vendor-list.md`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Vendor name |
+| `opportunityPageUrl` | string | URL of job listings page |
+| `priority` | string | High / Standard |
+
+#### FailedScan
+
+Represents a scan that could not be completed.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `target` | string | Company or vendor name |
+| `errorCode` | string | HTTP or parse error code |
+| `errorMessage` | string | Human-readable error detail |
+
+---
+
+## 5. Key Workflows
+
+### 5.1 Board Search
+
+![Sequence Diagram](diagrams/sequence_board_search.png)
+
+The skill iterates over each configured job board, constructs a keyword + location search, and extracts listings. Staleness is evaluated during extraction. All results are passed to the output formatter.
+
+### 5.2 Portal Scan
+
+![Sequence Diagram](diagrams/sequence_portal_scan.png)
+
+The skill loads the target account list, navigates to each career page, detects the ATS type, and applies the appropriate scraping strategy. Any navigation or parse failure is captured as a FailedScan record.
+
+### 5.3 Recruiter Board Search
+
+![Sequence Diagram](diagrams/sequence_recruiter_search.png)
+
+The skill loads the recruiter vendor list, sorts by priority (High first), and searches each vendor's opportunity page. Priority vendor results are tagged `[Priority Recruiter]`. Failed vendors are captured as FailedScan records.
+
+---
+
+## 6. API Contracts
+
+No external REST API. All interactions are browser automation (Playwright via Claude Code skill runtime) and file-system writes.
+
+**Output file location:** `content/job-search/search-<YYYYMMDD>.md`
+
+**YAML front-matter schema:**
+
+```yaml
+---
+date: 2026-04-05
+total_results: 42
+boards_searched:
+  - LinkedIn
+  - Indeed
+  - Glassdoor
+  - Remote.io
+  - WeWorkRemotely
+new_listings: 38
+seen_listings: 4
+---
+```
+
+**Listing block schema:**
+
+```markdown
+### Senior .NET Architect — Acme Corp
+
+- **title**: Senior .NET Architect
+- **company**: Acme Corp
+- **source**: LinkedIn
+- **date**: 2026-03-28
+- **rate**: $120/hr
+- **url**: https://linkedin.com/jobs/view/...
+- **archetype**: Solutions Architect
+- **score**: 4.2
+```
+
+**Tags appended inline to the listing heading when applicable:**
+
+| Tag | Condition |
+|-----|-----------|
+| `[Stale]` | Posted date > 30 days before run date |
+| `[Priority Recruiter]` | Source is a Priority: High vendor |
+
+---
+
+## 7. Security Considerations
+
+- No credentials are stored by this feature; all sites are accessed as a guest browser session
+- LinkedIn and some boards may rate-limit or block automated access — the skill should respect `robots.txt` and implement polite delays between requests
+- The output files in `content/job-search/` may contain personally sensitive rate/negotiation context and should be excluded from public repository remotes
+- URLs in listing blocks should be treated as untrusted input and not executed programmatically
+
+---
+
+## 8. Open Questions
+
+| # | Question | Status |
+|---|----------|--------|
+| 1 | Should deduplication across runs be based on URL hash or title+company composite key? | Open |
+| 2 | Should the `score` field in listing blocks be computed by the job-search skill or deferred to the offer evaluator? | Open |
+| 3 | Should failed portal scans trigger a retry with exponential backoff, or fail immediately? | Open |
+| 4 | Should `docs/target-account-list.md` and `docs/recruiter-vendor-list.md` have a defined schema enforced by a validator script? | Open |
+| 5 | Should the search output file be automatically staged to `data/pipeline.md` or remain a separate artifact? | Open |

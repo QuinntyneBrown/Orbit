@@ -1,0 +1,26 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Search History and Deduplication
+
+Person(candidate, "Candidate", "Runs job search scans")
+
+System_Boundary(orbit, "Orbit Career Management") {
+    Container(searchSkill, "job-search Skill", "Claude Code Skill", "Fetches raw job listings from job boards")
+    Container(psScripts, "PowerShell Scripts", "PowerShell", "Orchestrates scan runs and invokes sub-components")
+    Container(historyStore, "History Store", "TSV File + PowerShell", "Persists and deduplicates scan records in scan-history.tsv")
+    Container(exportWriter, "Dated Export Writer", "PowerShell", "Writes YYYY-MM-DD.md exports and manages rolling window")
+    ContainerDb(tsvFile, "scan-history.tsv", "TSV File", "Persistent record of all scanned listings with status")
+    ContainerDb(exportFiles, "search-results/", "Markdown Files", "Rolling window of 8 dated human-readable exports")
+}
+
+Rel(candidate, psScripts, "Executes scan command")
+Rel(psScripts, searchSkill, "Invokes to fetch listings")
+Rel(psScripts, historyStore, "Passes raw results for persistence")
+Rel(historyStore, tsvFile, "Reads and appends records")
+Rel(psScripts, exportWriter, "Triggers dated export generation")
+Rel(exportWriter, tsvFile, "Reads current history for diff")
+Rel(exportWriter, exportFiles, "Writes and prunes export files")
+
+@enduml

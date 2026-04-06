@@ -1,0 +1,41 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Document Generation
+
+abstract class BuildJob {
+    +inputPath : String
+    +outputFormat : String
+    +outputPath : String
+    +execute() : Boolean
+}
+
+class DocxBuildJob {
+    +referencePath : String
+    +pandocArgs : String[]
+    +execute() : Boolean
+}
+
+class PdfBuildJob {
+    +htmlTemplatePath : String
+    +playwrightOptions : Object
+    +execute() : Boolean
+}
+
+class SyncReport {
+    +warnings : SyncWarning[]
+    +exitCode : Integer
+    +hasDivergence() : Boolean
+}
+
+class SyncWarning {
+    +section : String
+    +description : String
+}
+
+BuildJob <|-- DocxBuildJob
+BuildJob <|-- PdfBuildJob
+SyncReport "1" *-- "0..*" SyncWarning
+
+@enduml

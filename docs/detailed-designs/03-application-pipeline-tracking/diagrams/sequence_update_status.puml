@@ -1,0 +1,23 @@
+@startuml sequence_update_status
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Update Application Status
+
+actor "Quinntyne Brown" as User
+participant "data/pipeline.md" as Pipeline
+participant "templates/states.yml" as States
+
+User -> Pipeline : Locate row by Company/Role
+Pipeline --> User : Returns current row
+
+User -> States : Verify new status value\nis in valid list
+States --> User : Confirmed valid
+
+User -> Pipeline : Update Status cell\n(e.g. Applied -> Responded)
+User -> Pipeline : Append notes\n(e.g. recruiter name, date)
+Pipeline --> User : Row updated
+
+User -> Pipeline : Commit to Git
+
+@enduml

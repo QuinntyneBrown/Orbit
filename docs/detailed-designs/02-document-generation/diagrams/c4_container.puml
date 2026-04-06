@@ -1,0 +1,31 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Document Generation
+
+Person(user, "Quinntyne Brown", "Job seeker")
+
+System_Boundary(docgen, "Document Generation") {
+    Container(buildResume, "build-resume.ps1", "PowerShell", "Converts Markdown to DOCX via Pandoc using reference.docx template")
+    Container(buildPdf, "build-pdf.mjs", "Node.js / ESM", "Converts Markdown to PDF via Playwright HTML render")
+    Container(verifySync, "verify-sync.ps1", "PowerShell", "Compares key sections between two base resume files; exits non-zero on divergence")
+}
+
+ContainerDb(resumes, "resumes/", "Filesystem", "DOCX output — base/ and tailored/ subdirectories")
+ContainerDb(exports, "exports/", "Filesystem", "PDF output files")
+ContainerDb(content, "content/", "Filesystem", "Markdown source files (Feature 01)")
+ContainerDb(templates, "templates/", "Filesystem", "reference.docx, resume.html")
+
+Rel(user, buildResume, "Invokes with Markdown path")
+Rel(user, buildPdf, "Invokes with Markdown path")
+Rel(user, verifySync, "Invokes pre-build or in CI")
+Rel(buildResume, content, "Reads Markdown source")
+Rel(buildResume, templates, "Reads reference.docx")
+Rel(buildResume, resumes, "Writes DOCX output")
+Rel(buildPdf, content, "Reads Markdown source")
+Rel(buildPdf, templates, "Reads resume.html template")
+Rel(buildPdf, exports, "Writes PDF output")
+Rel(verifySync, content, "Reads both base files")
+
+@enduml

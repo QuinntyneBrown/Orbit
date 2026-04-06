@@ -1,0 +1,28 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Document Generation
+
+Container_Boundary(buildPdf, "build-pdf.mjs") {
+    Component(mdParser, "Markdown Parser", "Node.js module", "Reads Markdown file and converts to HTML fragment")
+    Component(htmlInjector, "HTML Injector", "Node.js module", "Injects HTML fragment into resume.html template")
+    Component(playwrightRenderer, "Playwright Renderer", "Playwright / Chromium", "Launches headless browser, loads HTML, exports PDF")
+}
+
+Container_Boundary(buildResume, "build-resume.ps1") {
+    Component(pandocInvoker, "Pandoc Invoker", "PowerShell", "Constructs Pandoc CLI command and executes conversion")
+    Component(outputRouter, "Output Router", "PowerShell", "Determines output path based on source directory")
+}
+
+Container_Boundary(verifySync, "verify-sync.ps1") {
+    Component(sectionExtractor, "Section Extractor", "PowerShell", "Extracts key sections from each base file")
+    Component(sectionComparator, "Section Comparator", "PowerShell", "Compares extracted sections and reports divergences")
+}
+
+Rel(mdParser, htmlInjector, "Provides HTML fragment")
+Rel(htmlInjector, playwrightRenderer, "Provides merged HTML page")
+Rel(pandocInvoker, outputRouter, "Uses resolved output path")
+Rel(sectionExtractor, sectionComparator, "Provides section pairs")
+
+@enduml

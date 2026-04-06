@@ -1,0 +1,23 @@
+@startuml sequence_create_variant
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Create Tailored Resume Variant
+
+actor "Quinntyne Brown" as User
+participant "content/base/" as Base
+participant "content/notes/" as Notes
+participant "content/tailored/" as Tailored
+
+User -> Base : Select base file\n(focused or full)
+Base --> User : Returns base Markdown
+
+User -> Notes : Open notes file\nfor target role
+Notes --> User : Returns role snapshot,\nbullets, keywords
+
+User -> Tailored : Create <company>-<role>.md\nwith YAML front matter\n(source_base, company, role)
+User -> Tailored : Customize bullets and\nkeywords from notes
+
+Tailored --> User : Tailored variant ready\nfor document generation
+
+@enduml

@@ -1,0 +1,23 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title Job Search and Discovery — C4 Context
+
+Person(user, "Job Seeker", "Initiates job search and reviews discovered listings")
+
+System(orbit, "Orbit Career System", "File-based career management toolset using PowerShell, Markdown, and Git")
+
+System_Ext(jobBoards, "Public Job Boards", "LinkedIn, Indeed, Glassdoor, Remote.io, WeWorkRemotely")
+System_Ext(companyPortals, "Company Career Portals", "Greenhouse, Ashby, Lever, Wellfound, Workable")
+System_Ext(recruiterBoards, "Recruiter Opportunity Pages", "Procom, Systematix, Altis, LeverageTek, Mindwire")
+System_Ext(git, "Git", "Version control for search result artifacts")
+
+Rel(user, orbit, "Invokes job-search skill", "Claude Code CLI")
+Rel(orbit, jobBoards, "Scrapes listings", "Playwright / HTTPS")
+Rel(orbit, companyPortals, "Scans career pages", "Playwright / HTTPS")
+Rel(orbit, recruiterBoards, "Searches opportunity pages", "Playwright / HTTPS")
+Rel(orbit, git, "Commits search output files", "git CLI")
+Rel(user, orbit, "Reviews discovered listings", "Markdown / VS Code")
+
+@enduml

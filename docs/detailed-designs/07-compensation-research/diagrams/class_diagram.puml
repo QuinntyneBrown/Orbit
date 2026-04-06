@@ -1,0 +1,57 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Compensation Research
+
+class JobListing {
+    +Title : string
+    +Company : string
+    +Board : string
+    +URL : string
+    +ExplicitRate : string
+    +RateEstimate : RateEstimate
+    +HasExplicitRate() : bool
+}
+
+class RateEstimate {
+    +RangeLow : decimal
+    +RangeHigh : decimal
+    +Currency : string
+    +Unit : RateUnit
+    +Confidence : ConfidenceLevel
+    +Source : string
+    +Format() : string
+}
+
+enum ConfidenceLevel {
+    High
+    Medium
+    Low
+}
+
+enum RateUnit {
+    Hourly
+    Annual
+}
+
+class ResearchRequest {
+    +Title : string
+    +LocationHint : string
+    +Seniority : string
+    +Industry : string
+}
+
+class ResearchResponse {
+    +RawText : string
+    +DataFound : bool
+    +ParsedEstimate : RateEstimate
+}
+
+JobListing "1" o-- "0..1" RateEstimate
+RateEstimate --> ConfidenceLevel
+RateEstimate --> RateUnit
+ResearchResponse "1" --> "0..1" RateEstimate
+ResearchRequest ..> ResearchResponse : produces
+
+@enduml

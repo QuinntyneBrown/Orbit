@@ -1,0 +1,24 @@
+@startuml sequence_add_entry
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Add Pipeline Entry
+
+actor "Quinntyne Brown" as User
+participant "build-pdf.mjs\n(Feature 02)" as Build
+participant "data/pipeline.md" as Pipeline
+participant "templates/states.yml" as States
+
+User -> Build : Generate PDF for tailored resume
+Build --> User : exports/<basename>.pdf
+
+User -> Pipeline : Open pipeline.md
+User -> States : Confirm valid status value\n(e.g. Applied)
+States --> User : Status confirmed valid
+
+User -> Pipeline : Append new row:\n# | Date | Company | Role | Source\n| Applied | Rate | PDF Link | Report | Notes
+
+Pipeline --> User : Row appended
+User -> Pipeline : Commit to Git
+
+@enduml

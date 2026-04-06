@@ -1,0 +1,18 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Role Archetype Classification
+
+Container_Boundary(classifier, "Archetype Classification Module") {
+    Component(orchestrator, "ArchetypeClassificationOrchestrator", "PowerShell Function", "Iterates result set; stores archetype and flags on each listing")
+    Component(archetypeClassifier, "ArchetypeClassifier", "PowerShell Function", "Evaluates prioritised keyword rules against title, company, description")
+    Component(ruleSetLoader, "ArchetypeRuleSetLoader", "PowerShell Function", "Loads and validates archetype-rules.json at startup")
+    Component(flagHandler, "ArchetypeFlagHandler", "PowerShell Function", "Applies archetype-specific side effects: base resume flag, clearance flag, inferred tag")
+}
+
+Rel(orchestrator, archetypeClassifier, "Submits listing for classification")
+Rel(archetypeClassifier, ruleSetLoader, "Requests loaded rule set")
+Rel(orchestrator, flagHandler, "Passes ArchetypeResult for flag application")
+
+@enduml

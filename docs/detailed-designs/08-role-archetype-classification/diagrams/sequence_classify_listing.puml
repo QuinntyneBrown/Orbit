@@ -1,0 +1,42 @@
+@startuml sequence_classify_listing
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Classify Listing into Archetype (L2-017)
+
+participant "ArchetypeClassification\nOrchestrator" as Orch
+participant "ArchetypeRuleSetLoader" as Loader
+participant "ArchetypeClassifier" as Classifier
+participant "ArchetypeFlagHandler" as Flags
+
+Orch -> Loader : LoadRuleSet(archetype-rules.json)
+Loader --> Orch : ArchetypeRuleSet (ordered by priority)
+
+loop for each listing in resultSet
+    Orch -> Classifier : Classify(listing, ruleSet)
+    loop for each rule in ruleSet (priority order)
+        Classifier -> Classifier : rule.Matches(title, company, description)?
+        alt match found
+            Classifier -> Classifier : record matched archetype\nIsInferred = false
+            Classifier -> Classifier : break loop
+        end
+    end
+    alt no rule matched
+        Classifier -> Classifier : archetype = EnterpriseContract\nIsInferred = true
+    end
+    Classifier --> Orch : ArchetypeResult
+    Orch -> Flags : ApplyFlags(listing, ArchetypeResult)
+    alt archetype == EnterpriseContract
+        Flags -> Flags : flags.RecommendBaseResume = true
+    else archetype == GovernmentPublicSector
+        Flags -> Flags : flags.FlagClearance = true
+    end
+    alt IsInferred == true
+        Flags -> Flags : append "[Archetype: inferred]" tag
+    end
+    Flags --> Orch : listing with archetype and flags set
+end
+
+Orch --> Orch : fully classified result set ready
+
+@enduml

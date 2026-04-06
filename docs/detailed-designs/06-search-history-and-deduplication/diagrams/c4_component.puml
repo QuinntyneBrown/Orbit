@@ -1,0 +1,22 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Search History and Deduplication
+
+Container_Boundary(psScripts, "PowerShell Scripts") {
+    Component(orchestrator, "SearchOrchestrator", "PowerShell Function", "Coordinates the full scan-persist-export pipeline")
+    Component(dedupEngine, "DeduplicationEngine", "PowerShell Function", "Tags results as New, Seen, or Applied using Company+Title key")
+    Component(historyStore, "HistoryStore", "PowerShell Function", "Reads and writes scan-history.tsv; enforces Applied protection")
+    Component(diffGen, "DiffGenerator", "PowerShell Function", "Computes net-new, removed, and status-changed listings")
+    Component(exportWriter, "DatedExportWriter", "PowerShell Function", "Writes dated Markdown export with diff header")
+    Component(rollingWindow, "RollingWindowManager", "PowerShell Function", "Prunes export files beyond 8-file rolling window")
+}
+
+Rel(orchestrator, historyStore, "Passes raw search results")
+Rel(historyStore, dedupEngine, "Delegates deduplication logic")
+Rel(orchestrator, diffGen, "Requests diff against previous run")
+Rel(orchestrator, exportWriter, "Provides tagged results and diff")
+Rel(exportWriter, rollingWindow, "Triggers pruning after write")
+
+@enduml

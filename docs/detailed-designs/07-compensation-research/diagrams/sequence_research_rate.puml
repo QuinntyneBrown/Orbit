@@ -1,0 +1,36 @@
+@startuml sequence_research_rate
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Research Rate for Unrated Posting (L2-016)
+
+participant "CompensationResearch\nOrchestrator" as Orch
+participant "RateDetector" as Detector
+participant "CompensationResearcher" as Researcher
+participant "RateEstimateFormatter" as Formatter
+participant "job-search Skill" as Skill
+
+loop for each listing in resultSet
+    Orch -> Detector : HasExplicitRate(listing)
+    alt explicit rate present
+        Detector --> Orch : true — skip
+    else no explicit rate
+        Detector --> Orch : false
+        Orch -> Researcher : Research(ResearchRequest)
+        Researcher -> Skill : Query public salary sources\n(title, location, seniority)
+        Skill --> Researcher : ResearchResponse
+        alt dataFound == true
+            Researcher -> Researcher : Parse range, confidence, source
+            Researcher --> Orch : RateEstimate
+            Orch -> Formatter : Format(RateEstimate)
+            Formatter --> Orch : "$X–$Y/hr (Confidence) — Source: name"
+            Orch -> Orch : listing.RateEstimate = formatted string
+        else no data found
+            Researcher --> Orch : ResearchResponse { DataFound = false }
+            Orch -> Orch : listing.RateEstimate = "No data found"
+        end
+    end
+end
+Orch --> Orch : enriched result set ready
+
+@enduml

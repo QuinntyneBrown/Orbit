@@ -1,0 +1,47 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Resume Content Management
+
+class BaseResume {
+    +variant : String
+    +filePath : String
+    +lastModified : Date
+}
+
+class TailoredResume {
+    +sourceBase : String
+    +company : String
+    +role : String
+    +filePath : String
+}
+
+class NotesFile {
+    +company : String
+    +role : String
+    +roleSnapshot : String
+    +baselineBullets : String[]
+    +bulletBank : String[]
+    +tailoringAngles : String[]
+    +keywordBank : String[]
+}
+
+class NotesTemplate {
+    +requiredSections : String[]
+    +filePath : String
+}
+
+class OutreachFile {
+    +company : String
+    +role : String
+    +type : String
+    +filePath : String
+}
+
+BaseResume "1" <-- "0..*" TailoredResume : derives from
+NotesTemplate "1" <.. "0..*" NotesFile : conforms to
+TailoredResume "1" ..> "0..1" NotesFile : references during tailoring
+TailoredResume "1" ..> "0..*" OutreachFile : associated outreach
+
+@enduml

@@ -1,0 +1,40 @@
+@startuml sequence_generate_diff
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Generate Run Diff (L2-015)
+
+participant "SearchOrchestrator" as Orch
+participant "DiffGenerator" as Diff
+participant "DatedExportWriter" as Writer
+participant "search-results/" as ExportDir
+participant "RollingWindowManager" as RWM
+
+Orch -> Diff : ComputeDiff(currentRecords[])
+Diff -> ExportDir : ListExportFiles(sorted by date desc)
+ExportDir --> Diff : fileList[]
+
+alt fewer than 2 files
+    Diff --> Orch : RunDiff { IsFirstRun = true }
+else
+    Diff -> ExportDir : ReadFile(fileList[0]) — previous run
+    ExportDir --> Diff : previousRecords[]
+    Diff -> Diff : previousKeys = KeySet(previousRecords)
+    Diff -> Diff : currentKeys = KeySet(currentRecords)
+    Diff -> Diff : newListings = currentKeys - previousKeys
+    Diff -> Diff : removedListings = previousKeys - currentKeys
+    Diff -> Diff : changedListings = same key, different status
+    Diff --> Orch : RunDiff
+end
+
+Orch -> Writer : WriteExport(currentRecords, RunDiff)
+Writer -> ExportDir : Write YYYY-MM-DD.md\nwith diff header + listings
+Writer -> RWM : PruneOldFiles()
+RWM -> ExportDir : ListAllExportFiles()
+ExportDir --> RWM : fileList[]
+alt count > 8
+    RWM -> ExportDir : Delete oldest file(s)
+end
+Writer --> Orch : done
+
+@enduml

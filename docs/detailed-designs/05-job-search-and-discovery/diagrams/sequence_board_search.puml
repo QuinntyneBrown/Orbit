@@ -1,0 +1,29 @@
+@startuml sequence_board_search
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Board Search — Job Board Scraping Workflow
+
+participant "job-search skill" as skill
+participant "Board Search Module" as board
+participant "Keyword Builder" as keywords
+participant "Staleness Checker" as stale
+collections "Job Boards" as boards
+
+skill -> board : Execute board search\n(keywords, geo filter)
+board -> keywords : Build search queries\n(.NET, C#, Angular, Architect\nSenior, Contract + GTA/Remote CA)
+keywords --> board : Query set per board
+loop for each board (LinkedIn, Indeed, Glassdoor, Remote.io, WeWorkRemotely)
+    board -> boards : Navigate search URL\nwith keyword + location params
+    boards --> board : Raw listing HTML
+    board -> board : Extract title, company,\nposted date, rate, URL
+    board -> stale : Check posted date\nvs run date
+    alt Posted > 30 days ago
+        stale --> board : Mark listing [Stale]
+    else Posted ≤ 30 days ago
+        stale --> board : Listing current
+    end
+end
+board --> skill : All listings with staleness flags\n(total across all boards)
+
+@enduml

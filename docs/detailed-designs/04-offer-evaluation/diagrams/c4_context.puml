@@ -1,0 +1,20 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title Offer Evaluation — C4 Context
+
+Person(user, "Job Seeker", "Evaluates job postings before investing tailoring effort")
+
+System(orbit, "Orbit Career System", "File-based career management toolset using PowerShell, Markdown, and Git")
+
+System_Ext(jobBoards, "Job Boards / Recruiters", "Source of job postings being evaluated")
+System_Ext(vscode, "VS Code / Editor", "Used to fill in the evaluation template")
+System_Ext(git, "Git", "Version control for all career artifacts")
+
+Rel(user, orbit, "Runs evaluation script", "PowerShell CLI")
+Rel(user, jobBoards, "Finds job postings", "Browser")
+Rel(orbit, vscode, "Opens evaluation template for editing", "Shell exec")
+Rel(orbit, git, "Commits evaluation artifacts", "git CLI")
+
+@enduml

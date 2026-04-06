@@ -1,0 +1,22 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title Offer Evaluation — C4 Component (Invoke-OfferEvaluation.ps1)
+
+Container_Boundary(evalScript, "Invoke-OfferEvaluation.ps1") {
+    Component(paramParser, "Parameter Parser", "PowerShell", "Validates --company and --role inputs, generates slugs")
+    Component(templateCopier, "Template Copier", "PowerShell", "Copies offer-eval-template.md to working path")
+    Component(editorLauncher, "Editor Launcher", "PowerShell", "Opens working file in $EDITOR or VS Code and waits")
+    Component(scoreInvoker, "Score Invoker", "PowerShell", "Calls Compute-OfferScore and receives result")
+    Component(saveInvoker, "Save Invoker", "PowerShell", "Calls Save-EvaluationReport with archive logic")
+    Component(pipelineLinker, "Pipeline Linker", "PowerShell", "Updates Report Link in data/pipeline.md")
+}
+
+Rel(paramParser, templateCopier, "Passes validated slug and target path")
+Rel(templateCopier, editorLauncher, "Passes working file path")
+Rel(editorLauncher, scoreInvoker, "Triggers after editor closes")
+Rel(scoreInvoker, saveInvoker, "Passes score result and file path")
+Rel(saveInvoker, pipelineLinker, "Passes final saved path")
+
+@enduml

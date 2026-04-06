@@ -1,0 +1,24 @@
+@startuml sequence_notes_template
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Create Notes File from Template
+
+actor "Quinntyne Brown" as User
+participant "templates/\nnotes-template.md" as Template
+participant "content/notes/" as Notes
+
+User -> Template : Copy notes-template.md
+Template --> User : Returns template\nwith required sections
+
+User -> Notes : Save as\n<company>-<role>.md
+
+User -> Notes : Fill in Role Snapshot
+User -> Notes : Fill in Baseline Bullets
+User -> Notes : Fill in Additional Bullet Bank
+User -> Notes : Fill in Tailoring Angles
+User -> Notes : Fill in Keyword Bank
+
+Notes --> User : Notes file complete\nand conforming to template
+
+@enduml

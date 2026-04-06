@@ -1,0 +1,16 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Role Archetype Classification
+
+Person(candidate, "Candidate", "Reviews classified listings and acts on archetype-specific guidance")
+
+System(orbit, "Orbit Career Management", "PowerShell + Node.js toolset that classifies each job listing into a role archetype")
+
+System_Ext(jobBoards, "Job Boards", "Source of raw listing data including title, company, and description")
+
+Rel(candidate, orbit, "Runs job search; receives listings annotated with archetype and flags")
+Rel(orbit, jobBoards, "Ingests listing title, company, and description text for classification")
+
+@enduml

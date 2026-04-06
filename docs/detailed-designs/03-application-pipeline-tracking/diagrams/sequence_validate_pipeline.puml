@@ -1,0 +1,28 @@
+@startuml sequence_validate_pipeline
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Validate Pipeline
+
+actor "Quinntyne Brown" as User
+participant "Pipeline Validator" as Validator
+participant "data/pipeline.md" as Pipeline
+participant "templates/states.yml" as States
+
+User -> Validator : Invoke validator script
+Validator -> Pipeline : Read and parse\nMarkdown table
+Pipeline --> Validator : Parsed rows
+Validator -> States : Load valid status list
+States --> Validator : validStatuses[]
+
+loop For each row
+    Validator -> Validator : Check Status cell\nagainst validStatuses
+end
+
+alt All statuses valid
+    Validator --> User : Exit code 0\n(pipeline is valid)
+else Invalid status found
+    Validator --> User : Report row number\nand invalid value\nExit code 1
+end
+
+@enduml

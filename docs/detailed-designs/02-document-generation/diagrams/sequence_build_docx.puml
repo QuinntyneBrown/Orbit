@@ -1,0 +1,19 @@
+@startuml sequence_build_docx
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Build DOCX Resume
+
+actor "Quinntyne Brown" as User
+participant "build-resume.ps1" as Script
+participant "Pandoc" as Pandoc
+participant "resumes/" as Output
+
+User -> Script : Invoke with -InputFile <path>
+Script -> Script : Determine output directory\n(base/ or tailored/)
+Script -> Pandoc : pandoc <input> --to docx\n--reference-doc=templates/reference.docx\n-o <output>.docx
+Pandoc --> Script : DOCX file written to output path
+Script -> Output : Move/confirm DOCX in correct subdirectory
+Output --> User : <basename>.docx ready
+
+@enduml

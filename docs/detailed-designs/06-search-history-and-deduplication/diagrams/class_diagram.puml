@@ -1,0 +1,68 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Search History and Deduplication
+
+class ScanRecord {
+    +Date : string
+    +Title : string
+    +Company : string
+    +Board : string
+    +URL : string
+    +Status : StatusEnum
+    +CompositeKey() : string
+}
+
+enum StatusEnum {
+    New
+    Seen
+    Applied
+}
+
+class ScanHistory {
+    +Records : ScanRecord[]
+    +KeyIndex : Map<string, ScanRecord>
+    +LoadFromTsv(path: string) : ScanHistory
+    +Append(records: ScanRecord[]) : void
+    +SaveToTsv(path: string) : void
+    +ContainsKey(key: string) : bool
+    +GetStatus(key: string) : StatusEnum
+}
+
+class SearchResult {
+    +Title : string
+    +Company : string
+    +Board : string
+    +URL : string
+}
+
+class DeduplicationResult {
+    +NewRecords : ScanRecord[]
+    +SeenRecords : ScanRecord[]
+    +AppliedRecords : ScanRecord[]
+    +AllTagged() : ScanRecord[]
+}
+
+class RunDiff {
+    +RunDate : string
+    +NewListings : ScanRecord[]
+    +RemovedListings : ScanRecord[]
+    +ChangedListings : ScanRecord[]
+    +IsFirstRun : bool
+}
+
+class DatedExport {
+    +FilePath : string
+    +RunDate : string
+    +DiffSummary : string
+    +Listings : ScanRecord[]
+}
+
+ScanRecord --> StatusEnum
+ScanHistory "1" *-- "many" ScanRecord
+DeduplicationResult *-- ScanRecord
+RunDiff *-- ScanRecord
+DatedExport *-- ScanRecord
+
+@enduml

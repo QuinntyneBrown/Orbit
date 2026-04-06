@@ -1,0 +1,25 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title Offer Evaluation — C4 Container
+
+Person(user, "Job Seeker", "Runs evaluation from the CLI")
+
+System_Boundary(orbit, "Orbit Career System") {
+    Container(evalScript, "Invoke-OfferEvaluation.ps1", "PowerShell Script", "Orchestrates the evaluation workflow")
+    Container(scoreModule, "Compute-OfferScore.psm1", "PowerShell Module", "Parses template and computes weighted score")
+    Container(saveModule, "Save-EvaluationReport.psm1", "PowerShell Module", "Archives existing file and writes new evaluation")
+    ContainerDb(evalStore, "content/evaluations/", "Markdown Files", "Persisted evaluation reports")
+    ContainerDb(template, "templates/offer-eval-template.md", "Markdown Template", "Source template copied per evaluation")
+    ContainerDb(pipeline, "data/pipeline.md", "Markdown File", "Pipeline tracker with report links")
+}
+
+Rel(user, evalScript, "Invokes with --company and --role", "PowerShell CLI")
+Rel(evalScript, template, "Copies template to working file", "File system")
+Rel(evalScript, scoreModule, "Delegates score computation", "Function call")
+Rel(evalScript, saveModule, "Delegates file persistence", "Function call")
+Rel(saveModule, evalStore, "Writes / archives evaluation file", "File system")
+Rel(evalScript, pipeline, "Updates Report Link column", "File system")
+
+@enduml

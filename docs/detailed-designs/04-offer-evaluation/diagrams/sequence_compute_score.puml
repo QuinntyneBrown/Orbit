@@ -1,0 +1,29 @@
+@startuml sequence_compute_score
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Compute Offer Score — Scoring Workflow
+
+participant "Score Invoker" as invoker
+participant "Compute-OfferScore.psm1" as scorer
+participant "Markdown Parser" as parser
+participant "Weight Engine" as engine
+
+invoker -> scorer : Compute-OfferScore(filePath)
+scorer -> parser : Read evaluation file
+parser --> scorer : Raw dimension ratings\n(A/B/C/Skip x5)
+scorer -> engine : Map ratings to\nnumeric values
+note right of engine
+  A = 5.0
+  B = 3.5
+  C = 2.0
+  Skip = 0.0
+end note
+engine --> scorer : Numeric values per dimension
+scorer -> engine : Apply weights\n(35/25/20/10/10)
+engine --> scorer : Weighted values
+scorer -> scorer : Sum weighted values\n= composite score
+scorer -> scorer : Determine label and action\n(≥4.5 Priority/Tailor\n3.0–4.4 Viable/Review\n<3.0 Low Fit/Skip)
+scorer --> invoker : ScoreResult\n{ score, label, recommendedAction }
+
+@enduml

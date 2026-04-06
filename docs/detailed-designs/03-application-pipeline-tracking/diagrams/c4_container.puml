@@ -1,0 +1,23 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Application Pipeline Tracking
+
+Person(user, "Quinntyne Brown", "Job seeker")
+
+System_Boundary(pipelineSys, "Application Pipeline Tracker") {
+    Container(table, "data/pipeline.md", "Markdown Table", "Single source of truth for all application records with ten columns per entry")
+    Container(states, "templates/states.yml", "YAML", "Canonical enumeration of eight valid application status values")
+    Container(validator, "Pipeline Validator", "PowerShell / Node.js", "Reads pipeline.md and states.yml; reports invalid status values; exits non-zero on failure")
+}
+
+ContainerDb(exports, "exports/", "Filesystem", "PDF files referenced via PDF Link column")
+
+Rel(user, table, "Appends entries, updates status and notes")
+Rel(validator, table, "Reads and parses Markdown table")
+Rel(validator, states, "Reads valid status vocabulary")
+Rel(table, exports, "PDF Link column references files here")
+Rel(user, validator, "Invokes for validation")
+
+@enduml

@@ -1,0 +1,59 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Offer Evaluation — Class Diagram
+
+enum Rating {
+    A
+    B
+    C
+    Skip
+}
+
+class ScoringDimension {
+    +name : string
+    +weight : float
+    +rating : Rating
+    +numericValue : float
+    +WeightedScore() : float
+}
+
+class OfferEvaluation {
+    +company : string
+    +role : string
+    +date : date
+    +notes : string
+    +score : float
+    +label : string
+    +recommendedAction : string
+    +Slug() : string
+}
+
+class ScoreResult {
+    +score : float
+    +label : string
+    +recommendedAction : string
+}
+
+class PipelineEntry {
+    +company : string
+    +role : string
+    +status : string
+    +reportLink : string
+}
+
+class EvaluationStore {
+    +BasePath : string
+    +Exists(slug) : bool
+    +Archive(slug, date) : void
+    +Write(slug, content) : string
+}
+
+OfferEvaluation "1" *-- "5" ScoringDimension : scored by
+ScoringDimension --> Rating : uses
+OfferEvaluation ..> ScoreResult : produces
+EvaluationStore ..> OfferEvaluation : persists
+PipelineEntry ..> OfferEvaluation : links to
+
+@enduml

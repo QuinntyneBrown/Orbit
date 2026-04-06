@@ -1,0 +1,21 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Application Pipeline Tracking
+
+Container_Boundary(pipelineSys, "Pipeline System") {
+    Component(pipelineTable, "Pipeline Table", "Markdown", "data/pipeline.md — ordered list of application entries as a GFM table")
+    Component(statusModel, "Status Model", "YAML", "templates/states.yml — eight canonical status values")
+    Component(tableParser, "Table Parser", "Script module", "Reads pipeline.md and deserializes rows into structured records")
+    Component(statusValidator, "Status Validator", "Script module", "Checks each row's Status value against the status model; collects violations")
+    Component(entryWriter, "Entry Writer", "Script module", "Appends or updates a row in the pipeline table with correct formatting")
+}
+
+Rel(tableParser, pipelineTable, "Reads and parses GFM table")
+Rel(statusValidator, tableParser, "Receives parsed rows")
+Rel(statusValidator, statusModel, "Loads valid status list")
+Rel(entryWriter, pipelineTable, "Writes new or updated rows")
+Rel(entryWriter, statusModel, "Validates status before write")
+
+@enduml

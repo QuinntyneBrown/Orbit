@@ -1,0 +1,20 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Application Pipeline Tracking
+
+Person(user, "Quinntyne Brown", "Job seeker who maintains and queries the application pipeline")
+
+System(pipeline, "Application Pipeline Tracker", "Markdown table tracking all job applications through a defined status lifecycle")
+
+System_Ext(git, "Git", "Version control for pipeline.md and status history")
+System_Ext(docgen, "Document Generation\n(Feature 02)", "Produces PDF outputs linked from pipeline entries")
+System_Ext(content, "Resume Content Layer\n(Feature 01)", "Provides tailored resumes associated with each application")
+
+Rel(user, pipeline, "Adds entries, updates status, reviews progress")
+Rel(pipeline, git, "Changes committed and version-controlled")
+Rel(docgen, pipeline, "PDF output path added to new entries")
+Rel(content, pipeline, "Tailored resume source linked via PDF entry")
+
+@enduml

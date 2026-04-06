@@ -1,0 +1,35 @@
+@startuml sequence_persist_results
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Persist Search Results (L2-014)
+
+participant "SearchOrchestrator" as Orch
+participant "HistoryStore" as Store
+participant "DeduplicationEngine" as Dedup
+participant "scan-history.tsv" as TSV
+
+Orch -> Store : PersistResults(rawResults[])
+Store -> TSV : Exists?
+alt File does not exist
+    Store -> TSV : Create with header row
+end
+Store -> TSV : LoadAllRecords()
+TSV --> Store : existingRecords[]
+Store -> Dedup : Deduplicate(rawResults, existingRecords)
+Dedup -> Dedup : BuildKeyIndex(existingRecords)
+loop for each rawResult
+    Dedup -> Dedup : key = Normalize(Company + Title)
+    alt key not in index
+        Dedup -> Dedup : tag as New
+    else status == Applied
+        Dedup -> Dedup : pass through as Applied (no overwrite)
+    else
+        Dedup -> Dedup : tag as Seen
+    end
+end
+Dedup --> Store : DeduplicationResult
+Store -> TSV : AppendNewRecords(result.NewRecords)
+Store --> Orch : DeduplicationResult
+
+@enduml

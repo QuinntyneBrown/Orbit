@@ -1,0 +1,22 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Document Generation
+
+Person(user, "Quinntyne Brown", "Job seeker who triggers document builds")
+
+System(docgen, "Document Generation", "Converts Markdown resume files to DOCX and PDF outputs")
+
+System_Ext(content, "Resume Content Layer\n(Feature 01)", "Provides Markdown source files")
+System_Ext(pandoc, "Pandoc", "External CLI tool for Markdown-to-DOCX conversion")
+System_Ext(playwright, "Playwright / Chromium", "Headless browser for HTML-to-PDF rendering")
+System_Ext(pipeline, "Application Pipeline\n(Feature 03)", "References generated PDF outputs")
+
+Rel(user, docgen, "Invokes build scripts")
+Rel(docgen, content, "Reads Markdown source files")
+Rel(docgen, pandoc, "Invokes for DOCX generation")
+Rel(docgen, playwright, "Invokes for PDF generation")
+Rel(pipeline, docgen, "Links to PDF outputs in exports/")
+
+@enduml

@@ -1,0 +1,26 @@
+@startuml sequence_verify_sync
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Verify Base Resume Sync
+
+actor "Quinntyne Brown" as User
+participant "verify-sync.ps1" as Script
+participant "quinntyne-brown.md" as Focused
+participant "quinntyne-brown-full.md" as Full
+
+User -> Script : Invoke verify-sync.ps1
+Script -> Focused : Read base focused resume
+Focused --> Script : File contents
+Script -> Full : Read base full resume
+Full --> Script : File contents
+Script -> Script : Extract key sections from each\n(role, certs, contact, dates)
+Script -> Script : Compare sections pair-by-pair
+
+alt No divergence found
+    Script --> User : Exit code 0\n(in sync)
+else Divergence detected
+    Script --> User : Warn to stderr\nfor each diverged section\nExit code 1
+end
+
+@enduml

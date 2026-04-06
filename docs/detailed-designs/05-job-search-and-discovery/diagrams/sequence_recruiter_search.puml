@@ -1,0 +1,33 @@
+@startuml sequence_recruiter_search
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Recruiter Board Search — Vendor Priority Workflow
+
+participant "job-search skill" as skill
+participant "Recruiter Board Module" as recruiter
+participant "Tag Injector" as tagger
+collections "Recruiter Sites" as sites
+
+skill -> recruiter : Execute recruiter search\n(--recruiter-boards)
+recruiter -> recruiter : Load docs/recruiter-vendor-list.md
+recruiter -> recruiter : Sort vendors by priority\n(High first: Procom, Systematix)
+loop for each vendor (High priority first)
+    recruiter -> sites : Navigate to opportunity page
+    alt Navigation successful
+        sites --> recruiter : Opportunity listings HTML
+        recruiter -> recruiter : Extract matching listings\n(keywords + geo filter)
+        alt Vendor priority = High
+            recruiter -> tagger : Flag listings\n[Priority Recruiter]
+            tagger --> recruiter : Tagged listings
+        else Standard priority
+            recruiter --> recruiter : Listings unchanged
+        end
+    else Navigation failed
+        sites --> recruiter : Error (HTTP / timeout)
+        recruiter -> recruiter : Record FailedScan\n{ vendor, errorCode, errorMessage }
+    end
+end
+recruiter --> skill : All listings + FailedScan records
+
+@enduml

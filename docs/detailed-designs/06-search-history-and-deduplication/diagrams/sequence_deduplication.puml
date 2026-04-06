@@ -1,0 +1,28 @@
+@startuml sequence_deduplication
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Deduplication Logic (L2-014)
+
+participant "HistoryStore" as Store
+participant "DeduplicationEngine" as Dedup
+
+Store -> Dedup : Deduplicate(incoming[], existing[])
+Dedup -> Dedup : Normalize keys\n(lowercase, trim whitespace)
+Dedup -> Dedup : Build existingKeyIndex\nfrom existing records
+
+loop for each incoming result
+    Dedup -> Dedup : key = NormalizeKey(Company, Title)
+    alt key absent from index
+        Dedup -> Dedup : Create ScanRecord\nStatus = New
+    else key present AND existing Status == Applied
+        Dedup -> Dedup : Retain ScanRecord\nStatus = Applied (unchanged)
+    else key present AND existing Status != Applied
+        Dedup -> Dedup : Create ScanRecord\nStatus = Seen
+    end
+end
+
+Dedup -> Dedup : Partition into\nNewRecords, SeenRecords, AppliedRecords
+Dedup --> Store : DeduplicationResult
+
+@enduml

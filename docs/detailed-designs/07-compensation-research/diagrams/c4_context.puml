@@ -1,0 +1,17 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Compensation Research
+
+Person(candidate, "Candidate", "Reviews enriched listings with rate estimates")
+
+System(orbit, "Orbit Career Management", "PowerShell + Node.js toolset that researches market rates for unrated job listings")
+
+System_Ext(salaryData, "Public Salary Data Sources", "Glassdoor, Levels.fyi, PayScale, LinkedIn Salary, and similar sites")
+
+Rel(candidate, orbit, "Runs job search; receives listings with rate estimates appended")
+Rel(orbit, salaryData, "Queries for market rate data matching role title and location")
+Rel(salaryData, orbit, "Returns salary range and source information")
+
+@enduml

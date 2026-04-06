@@ -1,0 +1,27 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Compensation Research
+
+Person(candidate, "Candidate", "Reviews enriched listings")
+
+System_Boundary(orbit, "Orbit Career Management") {
+    Container(psScripts, "PowerShell Scripts", "PowerShell", "Orchestrates scan and enrichment pipeline")
+    Container(searchSkill, "job-search Skill", "Claude Code Skill", "Fetches listings and queries salary data sources")
+    Container(rateEnricher, "Rate Enrichment Module", "PowerShell", "Detects missing rates, requests research, formats estimates")
+    ContainerDb(scanHistory, "scan-history.tsv", "TSV File", "Persistent listing store; Rate estimate field appended here")
+    ContainerDb(exportFiles, "search-results/", "Markdown Files", "Dated exports showing rate estimates alongside listings")
+}
+
+System_Ext(salaryData, "Public Salary Data Sources", "Glassdoor, Levels.fyi, PayScale")
+
+Rel(candidate, psScripts, "Executes scan with enrichment")
+Rel(psScripts, searchSkill, "Invokes to fetch listings")
+Rel(psScripts, rateEnricher, "Passes unrated listings for enrichment")
+Rel(rateEnricher, searchSkill, "Issues salary research queries")
+Rel(searchSkill, salaryData, "Scrapes public salary data")
+Rel(rateEnricher, scanHistory, "Writes enriched records")
+Rel(rateEnricher, exportFiles, "Rate estimates appear in dated exports")
+
+@enduml

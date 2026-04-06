@@ -1,0 +1,19 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Compensation Research
+
+Container_Boundary(rateEnricher, "Rate Enrichment Module") {
+    Component(orchestrator, "CompensationResearchOrchestrator", "PowerShell Function", "Iterates result set; dispatches research for unrated listings")
+    Component(rateDetector, "RateDetector", "PowerShell Function", "Inspects listing Rate field; returns true if explicit rate present")
+    Component(researcher, "CompensationResearcher", "PowerShell Function", "Queries salary data via job-search skill; returns RateEstimate")
+    Component(formatter, "RateEstimateFormatter", "PowerShell Function", "Formats range, confidence, and source into canonical string")
+}
+
+Rel(orchestrator, rateDetector, "Checks each listing for existing rate")
+Rel(orchestrator, researcher, "Requests salary research for unrated listings")
+Rel(orchestrator, formatter, "Passes RateEstimate for formatting")
+Rel(formatter, orchestrator, "Returns formatted Rate estimate string")
+
+@enduml

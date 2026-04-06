@@ -1,0 +1,29 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title Job Search and Discovery — C4 Container
+
+Person(user, "Job Seeker", "Runs search from the CLI")
+
+System_Boundary(orbit, "Orbit Career System") {
+    Container(skill, "job-search skill", "Claude Code Skill", "Orchestrates all search modes and writes output")
+    Container(boardModule, "Board Search Module", "Playwright / Node.js", "Searches public job boards for matching listings")
+    Container(portalModule, "Portal Scanner Module", "Playwright / Node.js", "Navigates company career pages using ATS-specific strategies")
+    Container(recruiterModule, "Recruiter Board Module", "Playwright / Node.js", "Searches recruiter opportunity pages by priority")
+    Container(formatter, "Output Formatter", "Node.js", "Assembles YAML front-matter and listing blocks")
+    ContainerDb(searchOutput, "content/job-search/", "Markdown Files", "Dated search result files")
+    ContainerDb(accountList, "docs/target-account-list.md", "Markdown Config", "Company career page registry")
+    ContainerDb(vendorList, "docs/recruiter-vendor-list.md", "Markdown Config", "Recruiter vendor registry with priority")
+}
+
+Rel(user, skill, "Invokes with mode flags", "Claude Code CLI")
+Rel(skill, boardModule, "Delegates board search")
+Rel(skill, portalModule, "Delegates portal scan")
+Rel(skill, recruiterModule, "Delegates recruiter search")
+Rel(portalModule, accountList, "Reads target accounts", "File system")
+Rel(recruiterModule, vendorList, "Reads vendor list", "File system")
+Rel(skill, formatter, "Passes all results")
+Rel(formatter, searchOutput, "Writes dated output file", "File system")
+
+@enduml
