@@ -96,7 +96,7 @@ $notesPattern = '^[`<]'
 foreach ($row in $rows) {
     if (-not [string]::IsNullOrWhiteSpace($row.notes)) {
         if ($row.notes -match $notesPattern) {
-            $violations.Add("Row id=$($row.id): notes -- value starts with backtick or HTML tag character")
+            $violations.Add("Row id=$($row.id): notes — value starts with backtick or HTML tag character")
         }
     }
 }
@@ -106,9 +106,9 @@ if ($violations.Count -eq 0) {
     Write-Host "Pipeline validation passed. $($rows.Count) row(s) checked, no violations."
     exit 0
 } else {
-    Write-Error "Pipeline validation found $($violations.Count) violation(s):"
     foreach ($v in $violations) {
-        Write-Host $v
+        [Console]::Error.WriteLine($v)
     }
+    [Console]::Error.WriteLine("Pipeline validation found $($violations.Count) violation(s).")
     exit 1
 }

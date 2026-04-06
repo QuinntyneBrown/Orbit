@@ -25,7 +25,7 @@ $hasError = $false
 function Read-FileOrExit {
     param([string]$Path)
     if (-not (Test-Path $Path)) {
-        Write-Error "File not found: $Path"
+        [Console]::Error.WriteLine("ERROR: File not found: $Path")
         exit 1
     }
     return Get-Content $Path -Raw
@@ -81,10 +81,10 @@ $comprehensiveRole = Get-CurrentRoleTitle $comprehensiveContent
 
 if ($null -ne $focusedRole) {
     if ($null -eq $comprehensiveRole) {
-        Write-Error "ERROR: Current role title found in focused-base.md but not in comprehensive-base.md."
+        [Console]::Error.WriteLine("ERROR: Current role title found in focused-base.md but not in comprehensive-base.md.")
         $hasError = $true
     } elseif ($focusedRole -ne $comprehensiveRole) {
-        Write-Warning "WARN: Current role title differs. Focused='$focusedRole' Comprehensive='$comprehensiveRole'"
+        [Console]::Error.WriteLine("WARN: Current role title differs. Focused='$focusedRole' Comprehensive='$comprehensiveRole'")
     }
 }
 
@@ -112,10 +112,10 @@ foreach ($heading in $certSectionNames) {
 
 if ($null -ne $focusedCerts) {
     if ($null -eq $comprehensiveCerts) {
-        Write-Error "ERROR: Certifications section found in focused-base.md but not in comprehensive-base.md."
+        [Console]::Error.WriteLine("ERROR: Certifications section found in focused-base.md but not in comprehensive-base.md.")
         $hasError = $true
     } elseif ($focusedCerts -ne $comprehensiveCerts) {
-        Write-Warning "WARN: Certifications section content differs between focused and comprehensive resumes."
+        [Console]::Error.WriteLine("WARN: Certifications section content differs between focused and comprehensive resumes.")
     }
 }
 
@@ -127,10 +127,10 @@ foreach ($key in $contactKeys) {
 
     if ($null -ne $focusedVal) {
         if ($null -eq $comprehensiveVal) {
-            Write-Error "ERROR: Contact field '$key' found in focused-base.md but not in comprehensive-base.md."
+            [Console]::Error.WriteLine("ERROR: Contact field '$key' found in focused-base.md but not in comprehensive-base.md.")
             $hasError = $true
         } elseif ($focusedVal -ne $comprehensiveVal) {
-            Write-Warning "WARN: Contact field '$key' differs. Focused='$focusedVal' Comprehensive='$comprehensiveVal'"
+            [Console]::Error.WriteLine("WARN: Contact field '$key' differs. Focused='$focusedVal' Comprehensive='$comprehensiveVal'")
         }
     }
 }
