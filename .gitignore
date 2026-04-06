@@ -50,6 +50,9 @@ content/tailored/
 # Candidate profile — contains compensation targets, keywords, location preferences
 config/profile.yml
 
+# Interview notes — contain personal reflections and preparation content
+content/notes/
+
 # Generated documents
 resumes/
 exports/
