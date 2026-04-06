@@ -136,6 +136,46 @@ foreach ($key in $contactKeys) {
     }
 }
 
+# ── Check 4: Dates on most recent roles ─────────────────────────────────────
+# Extracts the first date-like token found in the body of the current role section
+# (between the first ## heading and the next ## heading or EOF).
+function Get-CurrentRoleDates {
+    param([string]$Content)
+    # Locate the first ## heading (current role section) after the # name heading
+    $lines = $Content -split "`n"
+    $foundH1      = $false
+    $inRoleSection = $false
+    $dates        = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in $lines) {
+        if (-not $foundH1 -and $line -match '^# ') { $foundH1 = $true; continue }
+        if ($foundH1 -and -not $inRoleSection -and $line -match '^## ') {
+            $inRoleSection = $true
+            # Fall through: also scan this heading line itself for dates
+        } elseif ($inRoleSection -and $line -match '^## ') {
+            break  # Entered the next section — stop collecting
+        }
+        if ($inRoleSection) {
+            # Match common resume date patterns: "Jan 2022", "2022", "Present", "–", "2022–2024"
+            $dateMatches = [regex]::Matches($line, '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}|\d{4}\s*[–\-]\s*(?:\d{4}|Present)|Present|\d{4}')
+            foreach ($m in $dateMatches) { $dates.Add($m.Value.Trim()) }
+        }
+    }
+    if ($dates.Count -eq 0) { return $null }
+    return ($dates | Select-Object -Unique) -join ', '
+}
+
+$focusedDates      = Get-CurrentRoleDates $focusedContent
+$comprehensiveDates = Get-CurrentRoleDates $comprehensiveContent
+
+if ($null -ne $focusedDates) {
+    if ($null -eq $comprehensiveDates) {
+        [Console]::Error.WriteLine("ERROR: Current role dates found in focused-base.md but not in comprehensive-base.md.")
+        $hasError = $true
+    } elseif ($focusedDates -ne $comprehensiveDates) {
+        [Console]::Error.WriteLine("WARN: Current role dates differ. Focused='$focusedDates' Comprehensive='$comprehensiveDates'")
+    }
+}
+
 # ── Result ───────────────────────────────────────────────────────────────────
 if ($hasError) {
     exit 1
