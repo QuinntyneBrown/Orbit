@@ -114,15 +114,16 @@ VALUES
         }
         $newId = [int](Invoke-SqliteQuery -SQLiteConnection $evalConn `
             -Query "SELECT last_insert_rowid() AS id").id
+
+        # Link old evaluation via superseded_by — same connection so the UPDATE is
+        # visible in the same transaction context as the INSERT above.
+        if ($existing) {
+            Invoke-SqliteQuery -SQLiteConnection $evalConn `
+                -Query "UPDATE offer_evaluations SET superseded_by = @newId WHERE id = @oldId" `
+                -SqlParameters @{ newId = $newId; oldId = $existing.id }
+        }
     } finally {
         $evalConn.Close()
-    }
-
-    # Link old evaluation via superseded_by
-    if ($existing) {
-        Invoke-SqliteQuery -DataSource $dbPath `
-            -Query "UPDATE offer_evaluations SET superseded_by = @newId WHERE id = @oldId" `
-            -SqlParameters @{ newId = $newId; oldId = $existing.id }
     }
 
     # Update pipeline_entries.eval_id

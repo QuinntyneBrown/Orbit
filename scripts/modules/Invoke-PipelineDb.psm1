@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
     Invoke-SqliteQuery -DataSource $DbPath -Query $bootstrapSql
 
     # Find migration files relative to this module's location
-    $migrationsDir = Join-Path $PSScriptRoot '..\..\db\migrations'
+    $migrationsDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\db\migrations'))
     $migrationFiles = Get-ChildItem -Path $migrationsDir -Filter '*.sql' | Sort-Object Name
 
     foreach ($file in $migrationFiles) {
