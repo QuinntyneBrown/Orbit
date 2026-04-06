@@ -23,11 +23,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = $PSScriptRoot
+$repoRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
 
 # Resolve absolute input path
 if (-not [System.IO.Path]::IsPathRooted($InputFile)) {
-    $InputFile = Join-Path $repoRoot $InputFile
+    $InputFile = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $InputFile))
 }
 
 if (-not (Test-Path $InputFile)) {
@@ -90,14 +90,14 @@ Write-Host "DOCX built successfully: $outputPath"
 if ($PDF) {
     $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
     if (-not $nodeCmd) {
-        Write-Error "node is not on PATH. Install Node.js to generate PDFs."
+        [Console]::Error.WriteLine("ERROR: node is not on PATH. Install Node.js to generate PDFs.")
         exit 1
     }
     $buildPdfScript = Join-Path $repoRoot 'scripts\build-pdf.mjs'
     Write-Host "Building PDF via: $buildPdfScript"
     & node $buildPdfScript $InputFile
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "build-pdf.mjs exited with code $LASTEXITCODE"
+        [Console]::Error.WriteLine("ERROR: build-pdf.mjs exited with code $LASTEXITCODE")
         exit 1
     }
     Write-Host "PDF built successfully."

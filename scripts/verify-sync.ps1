@@ -66,7 +66,8 @@ function Get-Section {
 # ── Helper: extract YAML front matter value ──────────────────────────────────
 function Get-YamlValue {
     param([string]$Content, [string]$Key)
-    if ($Content -match "(?m)^---\s*$(.+?)^---\s*$" -or $Content -match "(?ms)^---(.+?)---") {
+    # (?ms) = multiline + dotall so the lazy .+? crosses lines between the --- delimiters
+    if ($Content -match "(?ms)^---(.+?)^---") {
         $frontMatter = $Matches[1]
         if ($frontMatter -match "(?m)^$([regex]::Escape($Key)):\s*(.+)$") {
             return $Matches[1].Trim()

@@ -28,7 +28,7 @@ if (-not $DbPath) {
 Import-Module PSSQLite -ErrorAction Stop
 
 if (-not (Test-Path $DbPath)) {
-    Write-Error "Database not found at: $DbPath"
+    [Console]::Error.WriteLine("ERROR: Database not found at: $DbPath")
     exit 1
 }
 
