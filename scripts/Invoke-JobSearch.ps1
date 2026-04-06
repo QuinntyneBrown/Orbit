@@ -164,7 +164,7 @@ $allResults = Invoke-CompensationResearch -Listings $allResults -DbPath $dbPath
 
 # Outreach generation
 if ($Outreach) {
-    $highScoreListings = $allResults | Where-Object { $_.Score -ge 4.5 }
+    $highScoreListings = $allResults | Where-Object { $_.auto_score -ge 4.5 }
     foreach ($listing in $highScoreListings) {
         Invoke-OutreachGeneration -Listing $listing -DbPath $dbPath
     }
