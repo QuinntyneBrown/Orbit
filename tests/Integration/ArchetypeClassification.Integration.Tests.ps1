@@ -25,12 +25,16 @@ BeforeAll {
             [string]$Company     = 'Corp',
             [string]$Description = ''
         )
+        # All properties that Invoke-ArchetypeClassification may write must be declared
+        # upfront; PSCustomObjects are read-only for new properties not in the constructor.
         [PSCustomObject]@{
-            Title              = $Title
-            Company            = $Company
-            Description        = $Description
-            Archetype          = 'Enterprise Contract'  # mutable default
-            ArchetypeInferred  = 1
+            Title                = $Title
+            Company              = $Company
+            Description          = $Description
+            Archetype            = 'Enterprise Contract'
+            ArchetypeInferred    = 1
+            SecurityClearanceFlag = $false
+            RecommendedBase      = $null
         }
     }
 }

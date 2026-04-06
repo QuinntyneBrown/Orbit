@@ -40,13 +40,13 @@ LIMIT @topN
 
 function Add-InterviewStory {
     param(
-        [Parameter(Mandatory)][string]   $Title,
-        [Parameter(Mandatory)][string]   $Context,
-        [Parameter(Mandatory)][string]   $Situation,
-        [Parameter(Mandatory)][string]   $Task,
-        [Parameter(Mandatory)][string]   $Action,
-        [Parameter(Mandatory)][string]   $Result,
-        [Parameter(Mandatory)][string]   $Reflection,
+        [Parameter(Mandatory)][AllowEmptyString()][string]   $Title,
+        [Parameter(Mandatory)][AllowEmptyString()][string]   $Context,
+        [Parameter(Mandatory)][AllowEmptyString()][string]   $Situation,
+        [Parameter(Mandatory)][AllowEmptyString()][string]   $Task,
+        [Parameter(Mandatory)][AllowEmptyString()][string]   $Action,
+        [Parameter(Mandatory)][AllowEmptyString()][string]   $Result,
+        [Parameter(Mandatory)][AllowEmptyString()][string]   $Reflection,
         [string[]] $Skills   = @(),
         [string[]] $Keywords = @(),
         [string]   $DbPath   = $script:DefaultDbPath
