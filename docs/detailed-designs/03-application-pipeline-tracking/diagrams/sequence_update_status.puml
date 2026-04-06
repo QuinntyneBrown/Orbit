@@ -4,20 +4,21 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Update Application Status
 
-actor "Job Seeker" as User
-participant "data/pipeline.md" as Pipeline
-participant "templates/states.yml" as States
+actor Candidate
+participant "Invoke-PipelineDb.psm1" as Module
+database "orbit.db\npipeline_entries" as DB
 
-User -> Pipeline : Locate row by Company/Role
-Pipeline --> User : Returns current row
-
-User -> States : Verify new status value\nis in valid list
-States --> User : Confirmed valid
-
-User -> Pipeline : Update Status cell\n(e.g. Applied -> Responded)
-User -> Pipeline : Append notes\n(e.g. recruiter name, date)
-Pipeline --> User : Row updated
-
-User -> Pipeline : Commit to Git
+Candidate -> Module : Update-PipelineStatus\n(-Id N, -Status "Responded")
+Module -> DB : UPDATE pipeline_entries\nSET status = ?,\nupdated_at = datetime('now')\nWHERE id = ?
+alt CHECK constraint violation
+    DB --> Module : SQLITE_CONSTRAINT error
+    Module --> Candidate : ERROR: invalid status value
+else 0 rows affected (id not found)
+    DB --> Module : 0 rows affected
+    Module --> Candidate : WARNING: no row with id = N
+else 1 row updated
+    DB --> Module : 1 row affected
+    Module --> Candidate : Status updated to Responded
+end
 
 @enduml

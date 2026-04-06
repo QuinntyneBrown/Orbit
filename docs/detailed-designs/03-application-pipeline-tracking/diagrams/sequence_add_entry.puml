@@ -4,21 +4,24 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Add Pipeline Entry
 
-actor "Job Seeker" as User
-participant "build-pdf.mjs\n(Feature 02)" as Build
-participant "data/pipeline.md" as Pipeline
-participant "templates/states.yml" as States
+actor Candidate
+participant "build-resume.ps1\n(Feature 02)" as Build
+participant "Invoke-PipelineDb.psm1" as Module
+database "orbit.db\npipeline_entries" as DB
 
-User -> Build : Generate PDF for tailored resume
-Build --> User : exports/<basename>.pdf
+Candidate -> Build : Invoke -InputFile <path> [-PDF]
+Build --> Candidate : DOCX (and PDF) written to resumes/ and exports/
 
-User -> Pipeline : Open pipeline.md
-User -> States : Confirm valid status value\n(e.g. Applied)
-States --> User : Status confirmed valid
-
-User -> Pipeline : Append new row:\n# | Date | Company | Role | Source\n| Applied | Rate | PDF Link | Report | Notes
-
-Pipeline --> User : Row appended
-User -> Pipeline : Commit to Git
+Candidate -> Module : Add-PipelineEntry\n(Company, Role, Source,\nAppliedDate, Status, PdfPath)
+Module -> DB : SELECT MAX(seq_no) + 1 FROM pipeline_entries
+DB --> Module : next seq_no
+Module -> DB : INSERT INTO pipeline_entries\n(seq_no, applied_date, company, role,\nsource, status, pdf_path)\nVALUES (?, ?, ?, ?, ?, ?, ?)
+alt CHECK constraint violation (invalid status)
+    DB --> Module : SQLITE_CONSTRAINT
+    Module --> Candidate : ERROR: invalid status value
+else Insert succeeded
+    DB --> Module : new row id
+    Module --> Candidate : Entry added (id = N, seq_no = M)
+end
 
 @enduml
