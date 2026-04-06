@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-Feature 05 automates the discovery of relevant job and contract opportunities within Orbit by searching public job boards, company career portals, and recruiter-specific boards. Results are surfaced in a standardized Markdown format suitable for pipeline review and downstream evaluation (Feature 04).
+Feature 05 automates the discovery of relevant job and contract opportunities within Orbit by searching public job boards, company career portals, and recruiter-specific boards. Results are persisted directly to the Orbit SQLite database (`data/orbit.db`) via the `job_listings` and `scan_runs` tables, then exported to a human-readable Markdown file. The database is the source of truth; the Markdown export is derived output.
 
 **Scope:**
 - L1-005: Automated job discovery matching the candidate profile
@@ -13,10 +13,11 @@ Feature 05 automates the discovery of relevant job and contract opportunities wi
 
 **Key design decisions:**
 - Three distinct modes (`--board-search`, `--scan-portals`, `--recruiter-boards`) can be run independently or together
-- Output is always a single Markdown file per run, never appended to existing results
-- Staleness is assessed at render time (> 30 days from posted date) by injecting a `[Stale]` tag
-- Priority recruiter results are flagged `[Priority Recruiter]` in the listing block
-- Target keywords and geographic filters are driven by the candidate profile configuration
+- All results are persisted to `job_listings` and `scan_runs` tables via Feature 06's HistoryStore; the search module delegates all DB writes to Feature 06
+- Staleness (`is_stale = 1`) is set during upsert (posted_date > 30 days before run_date)
+- Priority recruiter results are flagged `is_priority_recruiter = 1` on the `job_listings` row
+- Target accounts are read from `target_accounts` DB table; recruiter vendors from `recruiter_contacts`
+- Target keywords and geographic filters are driven by `config/profile.yml`
 
 ---
 
@@ -119,7 +120,7 @@ For each board:
 
 ### 3.3 Portal Scanner Module
 
-**Responsibility:** Navigate to career pages of accounts listed in `docs/target-account-list.md`
+**Responsibility:** Navigate to career pages of accounts in the `target_accounts` DB table
 
 For each company:
 1. Resolve the career page URL from the account list
@@ -139,11 +140,11 @@ For each company:
 
 Failed scans are collected and listed in the "Failed to scan" section of the output file with an error code.
 
-**No portal configured (L2-012 AC4):** Companies in the target account list with no `careerPageUrl` value are listed in a separate "No portal configured" section — distinct from "Failed to scan". This makes it clear the omission is a data gap, not a scan failure.
+**No portal configured (L2-012 AC4):** Companies in `target_accounts` with a NULL `career_page_url` are listed in a separate "No portal configured" section in the export — distinct from "Failed to scan". This makes it clear the omission is a data gap, not a scan failure.
 
 ### 3.4 Recruiter Board Module
 
-**Responsibility:** Search opportunity pages of staffing vendors in `docs/recruiter-vendor-list.md`
+**Responsibility:** Search opportunity pages of staffing vendors in the `recruiter_contacts` DB table (`priority_tier = 'High'` searched first)
 
 Execution order: `Priority: High` vendors are searched first. Results from priority vendors are flagged `[Priority Recruiter]` in the listing block. Failed vendor scans are listed in the "Failed to scan" section.
 
