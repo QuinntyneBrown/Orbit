@@ -24,21 +24,18 @@ BeforeAll {
             Output   = $out -join "`n"
         }
     }
+
+    # Helper — defined in BeforeAll so it is in scope for all It blocks (Pester 5).
+    # Cannot call module functions from within a helper defined at file scope.
+    function New-TempDb {
+        $db = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.db')
+        Initialize-OrbitDb -DbPath $db
+        return $db
+    }
 }
 
 AfterAll {
     Remove-Module Invoke-PipelineDb -ErrorAction SilentlyContinue
-}
-
-# ────────────────────────────────────────────────────────────────────────────
-# Helpers — inline to avoid Pester 5 scope quirks with module functions called
-# from BeforeAll-defined functions.
-# ────────────────────────────────────────────────────────────────────────────
-
-function New-TempDb {
-    $db = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.db')
-    Initialize-OrbitDb -DbPath $db
-    return $db
 }
 
 # ─── Clean data ──────────────────────────────────────────────────────────────
