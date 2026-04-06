@@ -5,23 +5,22 @@ skinparam sequenceMessageAlign center
 title Sequence — Follow-Up Check and Cross-Reference
 
 actor Candidate
-participant "job-search Skill" as Skill
-participant "recruiter-vendor-list.md" as RecruiterList
-participant "target-accounts.md" as TargetAccounts
+participant "Invoke-FollowupCheck.ps1" as Script
+database "orbit.db\nrecruiter_contacts\ntarget_accounts" as DB
 
-Candidate -> Skill : Run job-search or\ntrigger recruiter check
-Skill -> RecruiterList : Read all recruiter records
-RecruiterList --> Skill : Return RecruiterRecord list
+Candidate -> Script : Invoke-FollowupCheck
 
-Skill -> Skill : For each High-priority record:\ncompute days since last contact
-Skill -> Skill : Collect records where\ndays >= 90 → overdue list
+Script -> DB : SELECT id, name, agency,\n  last_contacted_date,\n  julianday('now') - julianday(last_contacted_date)\n    AS days_since_contact,\n  priority_tier\nFROM recruiter_contacts\nWHERE priority_tier = 'High'\n  AND last_contacted_date <= date('now', '-90 days')\nORDER BY days_since_contact DESC
+DB --> Script : overdue[]
 
-Skill -> TargetAccounts : Read target account list
-TargetAccounts --> Skill : Return TargetAccount list
+Script -> DB : SELECT rc.name AS recruiter,\n  rc.agency,\n  ta.company AS account,\n  ta.recruiter_contact_id\nFROM target_accounts ta\nLEFT JOIN recruiter_contacts rc\n  ON lower(trim(ta.company)) = lower(trim(rc.agency))\nWHERE ta.recruiter_contact_id IS NULL\n  AND rc.id IS NOT NULL
+DB --> Script : unlinked_matches[]
 
-Skill -> Skill : Match firm names\n(case-insensitive) between\nrecruiter list and account list
-Skill -> Skill : Flag unlinked matches\nas action items
+alt unlinked_matches not empty
+    Script -> DB : UPDATE target_accounts\nSET recruiter_contact_id = rc.id\nFROM recruiter_contacts rc\nWHERE lower(trim(target_accounts.company))\n  = lower(trim(rc.agency))
+    DB --> Script : N rows linked
+end
 
-Skill --> Candidate : Output "Due for follow-up" section\n(overdue High-priority contacts)\n+ Cross-reference action items
+Script --> Candidate : "Due for follow-up" section\n(overdue High-priority contacts\nwith days_since_contact)\n+ Cross-reference action items\n(newly linked accounts)
 
 @enduml

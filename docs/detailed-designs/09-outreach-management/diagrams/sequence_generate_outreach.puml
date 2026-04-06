@@ -10,6 +10,7 @@ participant "MessageGenerator" as Generator
 participant "FilenameBuilder" as Namer
 participant "OutreachFileWriter" as Writer
 participant "content/outreach/" as Dir
+database "orbit.db\noutreach_records" as DB
 
 Orch -> Filter : FilterByScore(evaluatedListings, threshold=4.5)
 Filter --> Orch : qualifyingListings[] (score >= 4.5)
@@ -33,7 +34,10 @@ loop for each listing in qualifyingListings
 
     Orch -> Writer : Write(filePath, message.BodyText)
     Writer -> Dir : Create file at resolved path
-    Writer --> Orch : OutreachFile record
+    Writer --> Orch : OutreachFile { path, channel }
+
+    Orch -> DB : INSERT INTO outreach_records\n(company, role, channel='LinkedIn',\nfile_path, generated_at=datetime('now'),\nsent_at=NULL)
+    DB --> Orch : new outreach_record id
 end
 
 Orch --> Orch : outreach generation complete

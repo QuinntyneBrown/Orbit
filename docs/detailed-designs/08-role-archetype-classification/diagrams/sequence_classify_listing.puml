@@ -8,8 +8,9 @@ participant "ArchetypeClassification\nOrchestrator" as Orch
 participant "ArchetypeRuleSetLoader" as Loader
 participant "ArchetypeClassifier" as Classifier
 participant "ArchetypeFlagHandler" as Flags
+database "orbit.db\njob_listings" as DB
 
-Orch -> Loader : LoadRuleSet(archetype-rules.json)
+Orch -> Loader : LoadRuleSet(config/archetype-rules.json)
 Loader --> Orch : ArchetypeRuleSet (ordered by priority)
 
 loop for each listing in resultSet
@@ -22,19 +23,22 @@ loop for each listing in resultSet
         end
     end
     alt no rule matched
-        Classifier -> Classifier : archetype = EnterpriseContract\nIsInferred = true
+        Classifier -> Classifier : archetype = 'Enterprise Contract'\nIsInferred = true
     end
     Classifier --> Orch : ArchetypeResult
     Orch -> Flags : ApplyFlags(listing, ArchetypeResult)
-    alt archetype == EnterpriseContract
+    alt archetype == 'Enterprise Contract'
         Flags -> Flags : flags.RecommendBaseResume = true
-    else archetype == GovernmentPublicSector
+    else archetype == 'Government / Public Sector'
         Flags -> Flags : flags.FlagClearance = true
     end
     alt IsInferred == true
         Flags -> Flags : append "[Archetype: inferred]" tag
     end
     Flags --> Orch : listing with archetype and flags set
+
+    Orch -> DB : UPDATE job_listings\nSET archetype = ?,\n    archetype_inferred = ?\nWHERE company = ? AND title = ?
+    DB --> Orch : 1 row updated
 end
 
 Orch --> Orch : fully classified result set ready

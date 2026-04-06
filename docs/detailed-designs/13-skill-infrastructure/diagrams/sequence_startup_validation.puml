@@ -7,6 +7,7 @@ title Sequence — Startup Environment Validation
 actor Candidate
 participant "job-search Skill" as Skill
 participant "content/base/\nbase-resume.md" as BaseResume
+database "orbit.db" as DB
 
 Candidate -> Skill : Invoke skill
 
@@ -34,6 +35,25 @@ Skill -> BaseResume : Read first 10 lines\n(live file read check)
 BaseResume --> Skill : Return file content
 
 Skill -> Skill : Confirm content is real resume\n(not static summary placeholder)
+
+Skill -> DB : PRAGMA integrity_check
+alt integrity_check fails
+    DB --> Skill : error
+    Skill --> Candidate : ERROR: orbit.db integrity check failed.\nHalt. (exit code 1)
+end
+DB --> Skill : ok
+
+Skill -> DB : SELECT version FROM schema_migrations\nORDER BY version DESC LIMIT 1
+alt No migrations found
+    DB --> Skill : (empty)
+    Skill --> Candidate : ERROR: orbit.db not migrated.\nRun: sqlite3 orbit.db < db/migrations/0001_initial.sql\nHalt. (exit code 1)
+end
+DB --> Skill : { version }
+
+Skill -> Skill : Confirm version >= expected minimum
+alt Version too low
+    Skill --> Candidate : ERROR: orbit.db schema out of date\n(got v<n>, need v<min>).\nRun pending migrations. Halt.
+end
 
 Skill --> Candidate : All checks passed — proceeding silently.
 

@@ -5,24 +5,32 @@ skinparam sequenceMessageAlign center
 title Sequence — Validate Pipeline
 
 actor "Job Seeker" as User
-participant "Pipeline Validator" as Validator
-participant "data/pipeline.md" as Pipeline
-participant "templates/states.yml" as States
+participant "Invoke-ValidatePipeline.ps1" as Validator
+database "orbit.db\npipeline_entries" as DB
 
 User -> Validator : Invoke validator script
-Validator -> Pipeline : Read and parse\nMarkdown table
-Pipeline --> Validator : Parsed rows
-Validator -> States : Load valid status list
-States --> Validator : validStatuses[]
+
+Validator -> DB : SELECT id, seq_no, company, role, status\nFROM pipeline_entries\nORDER BY seq_no
+DB --> Validator : all pipeline rows
+
+note over Validator
+  Valid statuses enforced by CHECK constraint at DB layer.
+  Validator checks for data-quality issues not caught by schema.
+end note
 
 loop For each row
-    Validator -> Validator : Check Status cell\nagainst validStatuses
+    Validator -> Validator : Check seq_no is sequential\n(no gaps or duplicates)
+    Validator -> Validator : Check company and role\nnot null or empty
+    Validator -> Validator : Check eval_id references\nexisting offer_evaluation if set
 end
 
-alt All statuses valid
+Validator -> DB : SELECT pe.id\nFROM pipeline_entries pe\nWHERE pe.eval_id IS NOT NULL\nAND NOT EXISTS (\n  SELECT 1 FROM offer_evaluations oe\n  WHERE oe.id = pe.eval_id\n)
+DB --> Validator : orphaned_eval_links[]
+
+alt All checks pass AND orphaned_eval_links empty
     Validator --> User : Exit code 0\n(pipeline is valid)
-else Invalid status found
-    Validator --> User : Report row number\nand invalid value\nExit code 1
+else Issues found
+    Validator --> User : Report each issue\n(row id, field, description)\nExit code 1
 end
 
 @enduml
