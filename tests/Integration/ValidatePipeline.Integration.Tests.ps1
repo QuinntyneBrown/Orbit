@@ -13,35 +13,37 @@
 BeforeAll {
     $pipelineModule = Join-Path $PSScriptRoot '..\..\scripts\modules\Invoke-PipelineDb.psm1'
     Import-Module $pipelineModule -Force
-
     $script:ValidateScript = Join-Path $PSScriptRoot '..\..\scripts\Validate-Pipeline.ps1'
-
-    function Invoke-ValidatePipeline {
-        param([string]$DbPath)
-        $out = & pwsh -NonInteractive -NoProfile -File $script:ValidateScript -DbPath $DbPath 2>&1
-        [PSCustomObject]@{
-            ExitCode = $LASTEXITCODE
-            Output   = $out -join "`n"
-        }
-    }
-
-    # Helper — defined in BeforeAll so it is in scope for all It blocks (Pester 5).
-    # Cannot call module functions from within a helper defined at file scope.
-    function New-TempDb {
-        $db = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.db')
-        Initialize-OrbitDb -DbPath $db
-        return $db
-    }
 }
 
 AfterAll {
     Remove-Module Invoke-PipelineDb -ErrorAction SilentlyContinue
 }
 
+# ─── Helpers in global scope so Pester 5 closures can see them ───────────────
+
+function global:New-TestDb {
+    # Creates an empty, fully-migrated temp DB and returns its path.
+    # Initialize-OrbitDb outputs PRAGMA result objects; suppress them so only the
+    # path string is returned (otherwise $db = New-TestDb becomes an array).
+    $db = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.db')
+    Initialize-OrbitDb -DbPath $db | Out-Null
+    return $db
+}
+
+function global:Invoke-ValidatePipeline {
+    param([string]$DbPath)
+    $out = & pwsh -NonInteractive -NoProfile -File $script:ValidateScript -DbPath $DbPath 2>&1
+    [PSCustomObject]@{
+        ExitCode = $LASTEXITCODE
+        Output   = $out -join "`n"
+    }
+}
+
 # ─── Clean data ──────────────────────────────────────────────────────────────
 Describe 'Validate-Pipeline — clean data' {
     It 'exits 0 with no violations for valid pipeline entries' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Add-PipelineEntry -Company 'CleanCo' -Role 'Dev' -Source 'LinkedIn' `
                 -AppliedDate '2026-01-15' -Status 'Applied' -DbPath $db | Out-Null
@@ -53,7 +55,7 @@ Describe 'Validate-Pipeline — clean data' {
     }
 
     It 'exits 0 when the pipeline is empty' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             $r = Invoke-ValidatePipeline -DbPath $db
             $r.ExitCode | Should -Be 0 -Because "Output: $($r.Output)"
@@ -71,7 +73,7 @@ Describe 'Validate-Pipeline — clean data' {
 # ─── applied_date format ─────────────────────────────────────────────────────
 Describe 'Validate-Pipeline — applied_date format check' {
     It 'reports a violation for a non-YYYY-MM-DD applied_date' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Invoke-SqliteQuery -DataSource $db -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status)
@@ -86,7 +88,7 @@ VALUES (1, '15-01-2026', 'BadDateCo', 'Dev', 'LinkedIn', 'Applied')
     }
 
     It 'accepts YYYY-MM-DD dates without a violation' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Add-PipelineEntry -Company 'DateOk' -Role 'Dev' -Source 'LinkedIn' `
                 -AppliedDate '2026-03-15' -Status 'Applied' -DbPath $db | Out-Null
@@ -101,7 +103,7 @@ VALUES (1, '15-01-2026', 'BadDateCo', 'Dev', 'LinkedIn', 'Applied')
 # ─── seq_no ──────────────────────────────────────────────────────────────────
 Describe 'Validate-Pipeline — seq_no uniqueness and monotonicity' {
     It 'passes for entries with strictly increasing seq_no' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             for ($i = 1; $i -le 3; $i++) {
                 Add-PipelineEntry -Company "Co$i" -Role 'Dev' -Source 'LinkedIn' `
@@ -114,28 +116,19 @@ Describe 'Validate-Pipeline — seq_no uniqueness and monotonicity' {
         }
     }
 
-    It 'reports a violation for non-monotonic seq_no values (out-of-order insert)' {
-        $db = New-TempDb
+    It 'passes for gapped but monotonically increasing seq_no values' {
+        $db = New-TestDb
         try {
-            # Insert seq_no 1, then 3 (gap), then 2 — when sorted by seq_no: 1,2,3 = monotonic.
-            # Insert 3 then 2 where 2 < 3 means non-monotonic if not sorted.
-            # Validator sorts by seq_no so 1,2,3 passes. Test real violation: 1,3 then insert 0.
-            # UNIQUE constraint prevents duplicate seq_no, so craft via DELETE+raw INSERT.
             Invoke-SqliteQuery -DataSource $db -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status)
-VALUES (5, '2026-01-01', 'CoA', 'Dev', 'LinkedIn', 'Applied')
+VALUES (3, '2026-01-01', 'CoA', 'Dev', 'LinkedIn', 'Applied')
 "@
             Invoke-SqliteQuery -DataSource $db -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status)
-VALUES (3, '2026-01-02', 'CoB', 'Dev', 'Indeed', 'Evaluated')
+VALUES (5, '2026-01-02', 'CoB', 'Dev', 'Indeed', 'Evaluated')
 "@
-            # seq_no sorted: 3, 5 — both ascending; validator will pass.
-            # To get a true violation we need seq_no to NOT be strictly increasing when sorted.
-            # The UNIQUE constraint prevents duplicate seq_no. The monotonicity check requires
-            # seq_no[i] > seq_no[i-1] when sorted. 3 < 5 is monotonic.
-            # Test that the validator DOES pass for this valid (though gapped) sequence.
             $r = Invoke-ValidatePipeline -DbPath $db
-            $r.ExitCode | Should -Be 0 -Because "Gapped but monotonic seq_no should pass. Output: $($r.Output)"
+            $r.ExitCode | Should -Be 0 -Because "Gapped but monotonic. Output: $($r.Output)"
         } finally {
             Remove-Item $db -Force -ErrorAction SilentlyContinue
         }
@@ -145,7 +138,7 @@ VALUES (3, '2026-01-02', 'CoB', 'Dev', 'Indeed', 'Evaluated')
 # ─── pdf_path file existence ─────────────────────────────────────────────────
 Describe 'Validate-Pipeline — pdf_path file existence' {
     It 'reports a violation when pdf_path points to a non-existent file' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Invoke-SqliteQuery -DataSource $db -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status, pdf_path)
@@ -160,7 +153,7 @@ VALUES (1, '2026-01-01', 'PdfCo', 'Dev', 'LinkedIn', 'Applied', 'C:\nonexistent\
     }
 
     It 'passes when pdf_path is null (not set)' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Add-PipelineEntry -Company 'NoPdfCo' -Role 'Dev' -Source 'LinkedIn' `
                 -AppliedDate '2026-01-01' -Status 'Applied' -DbPath $db | Out-Null
@@ -172,7 +165,7 @@ VALUES (1, '2026-01-01', 'PdfCo', 'Dev', 'LinkedIn', 'Applied', 'C:\nonexistent\
     }
 
     It 'passes when pdf_path points to an existing file' {
-        $db  = New-TempDb
+        $db  = New-TestDb
         $pdf = [System.IO.Path]::GetTempFileName()
         try {
             Invoke-SqliteQuery -DataSource $db -Query @"
@@ -191,7 +184,7 @@ VALUES (1, '2026-01-01', 'PdfExistCo', 'Dev', 'LinkedIn', 'Applied', @pdf)
 # ─── notes leading-character check ───────────────────────────────────────────
 Describe 'Validate-Pipeline — notes leading-character check' {
     It 'reports a violation when notes starts with a backtick' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Invoke-SqliteQuery -DataSource $db -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status, notes)
@@ -206,7 +199,7 @@ VALUES (1, '2026-01-01', 'NotesCo', 'Dev', 'LinkedIn', 'Applied', '``some backti
     }
 
     It 'reports a violation when notes starts with an HTML tag (<)' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Invoke-SqliteQuery -DataSource $db -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status, notes)
@@ -221,7 +214,7 @@ VALUES (1, '2026-01-01', 'HtmlCo', 'Dev', 'LinkedIn', 'Applied', '<div>HTML note
     }
 
     It 'passes when notes is a plain text string' {
-        $db = New-TempDb
+        $db = New-TestDb
         try {
             Invoke-SqliteQuery -DataSource $db -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status, notes)

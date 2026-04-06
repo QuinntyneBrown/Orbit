@@ -124,9 +124,13 @@ SELECT engagement_status, notes FROM recruiter_contacts WHERE firm_name = @f
 
 Describe 'Get-FollowUpDue' {
     It 'returns High-priority contacts with null last_contacted_date' {
+        # Add-RecruiterContact now defaults last_contacted_date to today, so
+        # insert via raw SQL to force a NULL value and trigger the follow-up query.
         $firmName = "NullDateHigh-$(Get-Random)"
-        Add-RecruiterContact -FirmName $firmName -PriorityTier 'High' `
-            -DbPath $script:TempDb | Out-Null
+        Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
+INSERT INTO recruiter_contacts (firm_name, priority_tier, engagement_status)
+VALUES (@f, 'High', 'Active')
+"@ -SqlParameters @{ f = $firmName }
         $due = @(Get-FollowUpDue -DbPath $script:TempDb)
         $due | Where-Object { $_.firm_name -eq $firmName } | Should -Not -BeNullOrEmpty
     }
