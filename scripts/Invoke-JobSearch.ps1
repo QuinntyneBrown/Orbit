@@ -12,10 +12,11 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $dbPath   = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'data\orbit.db'))
 
-Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-PipelineDb.psm1')    -Force
-Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-HistoryStore.psm1')  -Force
+Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-PipelineDb.psm1')           -Force
+Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-HistoryStore.psm1')         -Force
 Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-ArchetypeClassification.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-CompensationResearch.psm1')    -Force
+Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-OutreachManagement.psm1')      -Force
 Import-Module PSSQLite -ErrorAction Stop
 
 # Stub functions — real implementations use Playwright web automation.
@@ -35,7 +36,12 @@ function Invoke-RecruiterBoardSearch {
     return @()
 }
 function Invoke-OutreachGeneration {
-    [CmdletBinding()] param($Listing, $DbPath)
+    # L2-018: generate LinkedIn message draft and persist to outreach_records
+    [CmdletBinding()]
+    param($Listing, $DbPath)
+    $lid = if ($Listing.Id) { [int]$Listing.Id } else { 0 }
+    New-LinkedInMessage -Company $Listing.Company -Role $Listing.Title `
+        -ListingId $lid -DbPath $DbPath
 }
 
 # Default: run all modes if no flag specified
@@ -91,6 +97,10 @@ if ($candidateProfile -match '(?s)keywords:\s*\r?\n((\s+-\s+.+\r?\n)+)') {
     $keywords = $matches[1].Trim() -split '\r?\n' |
         ForEach-Object { $_.Trim().TrimStart('- ').Trim() } |
         Where-Object { $_ -ne '' }
+}
+
+if ($keywords.Count -eq 0) {
+    Write-Warning "No keywords found in $profilePath — board search will run without search terms. Add a 'keywords:' list to your profile."
 }
 
 $boardsSearched = @()

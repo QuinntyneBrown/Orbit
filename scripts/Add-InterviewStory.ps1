@@ -17,6 +17,7 @@ $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $dbPath   = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'data\orbit.db'))
 
 Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-PipelineDb.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-StoryBank.psm1') -Force
 Import-Module PSSQLite -ErrorAction Stop
 
 Initialize-OrbitDb -DbPath $dbPath
@@ -63,26 +64,10 @@ if ($Keywords.Count -eq 0) {
     exit 1
 }
 
-# ConvertTo-Json -InputObject avoids the PS7 gotcha where @() | ConvertTo-Json returns "null"
-$skillsJson   = ConvertTo-Json -InputObject @($Skills)   -Compress
-$keywordsJson = ConvertTo-Json -InputObject @($Keywords) -Compress
+$newId = Add-InterviewStory `
+    -Title $Title -Context $Context -Situation $Situation -Task $Task `
+    -Action $Action -Result $Result -Reflection $Reflection `
+    -Skills $Skills -Keywords $Keywords -DbPath $dbPath
 
-$conn = New-SQLiteConnection -DataSource $dbPath
-try {
-    Invoke-SqliteQuery -SQLiteConnection $conn -Query @"
-INSERT INTO interview_stories
-    (title, context, situation, task, action, result, reflection, skills, keywords)
-VALUES
-    (@title, @context, @situation, @task, @action, @result, @reflection, @skills, @keywords)
-"@ -SqlParameters @{
-        title = $Title; context = $Context; situation = $Situation; task = $Task
-        action = $Action; result = $Result; reflection = $Reflection
-        skills = $skillsJson; keywords = $keywordsJson
-    }
-    $newId = [int](Invoke-SqliteQuery -SQLiteConnection $conn `
-        -Query "SELECT last_insert_rowid() AS id").id
-} finally {
-    $conn.Close()
-}
 Write-Host "Story saved (id=$newId): $Title"
 return $newId
