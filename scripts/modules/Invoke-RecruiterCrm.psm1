@@ -11,7 +11,8 @@ function Add-RecruiterContact {
         [string] $ContactLinkedin,
         [string] $PriorityTier        = 'Medium',
         [string] $OpportunityPageUrl,
-        [string] $LastContactedDate,
+        # L2-020 AC1: last_contacted_date must be non-null; default to today if not specified
+        [string] $LastContactedDate   = (Get-Date -Format 'yyyy-MM-dd'),
         [string] $EngagementStatus    = 'Active',
         [string] $Notes,
         [string] $DbPath = $script:DefaultDbPath

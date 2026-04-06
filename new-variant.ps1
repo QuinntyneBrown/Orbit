@@ -3,13 +3,16 @@
 param(
     [Parameter(Mandatory)][string] $Name,
     [switch] $Notes,
-    [switch] $Force
+    [switch] $Force,
+    # L2-001 AC1: the system maintains two base files; default to focused, allow comprehensive
+    [ValidateSet('focused-base.md', 'comprehensive-base.md')]
+    [string] $SourceBase = 'focused-base.md'
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
 
-$sourceBase      = Join-Path $repoRoot 'content\base\focused-base.md'
+$sourceBase      = Join-Path $repoRoot "content\base\$SourceBase"
 $notesTemplate   = Join-Path $repoRoot 'templates\notes-template.md'
 $variantOut      = Join-Path $repoRoot "content\tailored\resume-$Name.md"
 $notesOut        = Join-Path $repoRoot "content\notes\$Name.md"
@@ -47,7 +50,7 @@ Copy-Item -Path $sourceBase -Destination $variantOut -Force
 # into that existing block rather than prepending a second block, which would produce
 # two --- delimiters back-to-back and cause Pandoc to misparse the document.
 $existingContent = Get-Content $variantOut -Raw
-$injection = "source_base: focused-base.md`ncompany: `"`"`nrole: `"`"`n"
+$injection = "source_base: $SourceBase`ncompany: `"`"`nrole: `"`"`n"
 if ($existingContent -match '^---') {
     # Insert immediately after the opening --- line, preserving the existing line ending
     $merged = $existingContent -replace '^---(\r?\n)', "---`$1$injection"
