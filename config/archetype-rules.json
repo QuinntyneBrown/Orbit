@@ -1,0 +1,27 @@
+[
+  {
+    "priority": 1,
+    "archetype": "Government / Public Sector",
+    "patterns": ["federal", "provincial", "municipal", "crown", "public sector", "government", "dnd", "cra", "gc.ca", "security clearance", "top secret", "secret clearance", "reliability clearance", "pspc", "cse", "rcmp"]
+  },
+  {
+    "priority": 2,
+    "archetype": "AI / Innovation",
+    "patterns": ["ai", "ml", "machine learning", "llm", "genai", "generative ai", "deep learning", "r&d", "research engineer", "nlp", "computer vision", "data science", "neural network"]
+  },
+  {
+    "priority": 3,
+    "archetype": "Consulting Firm",
+    "patterns": ["consulting", "advisory", "professional services", "accenture", "deloitte", "kpmg", "mckinsey", "pwc", "ey ", "ernst & young", "bdo", "agency", "managed services"]
+  },
+  {
+    "priority": 4,
+    "archetype": "Product Company",
+    "patterns": ["saas", "isv", "product engineering", "platform", "series a", "series b", "series c", "b2b software", "software company", "product company", "startup", "scale-up", "scaleup"]
+  },
+  {
+    "priority": 5,
+    "archetype": "Enterprise Contract",
+    "patterns": ["staff augmentation", "contract-to-hire", "t&m", "body shop", "staffing", "contract position", "contract role", "staff aug"]
+  }
+]
