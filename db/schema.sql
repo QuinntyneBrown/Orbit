@@ -66,7 +66,9 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     version               INTEGER NOT NULL DEFAULT 1,
     superseded_by         INTEGER REFERENCES offer_evaluations (id),
     evaluated_at          TEXT    NOT NULL DEFAULT (datetime('now')),
-    created_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+    created_at            TEXT    NOT NULL DEFAULT (datetime('now')),
+    -- L2-009 AC3: scores below 3.0 must result in Skip at the database layer
+    CHECK (score >= 3.0 OR recommended_action = 'Skip')
 );
 
 CREATE INDEX IF NOT EXISTS idx_eval_company_role ON offer_evaluations (company, role);
