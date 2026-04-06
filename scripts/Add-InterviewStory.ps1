@@ -44,6 +44,25 @@ if (-not $Keywords) {
     if ($kwInput) { $Keywords = $kwInput -split ',' | ForEach-Object { $_.Trim() } }
 }
 
+# Spec L2-019 AC1: all STAR fields must be non-empty; at least one keyword required
+foreach ($check in @(
+        @{ Name = 'Title';      Value = $Title      }
+        @{ Name = 'Situation';  Value = $Situation  }
+        @{ Name = 'Task';       Value = $Task       }
+        @{ Name = 'Action';     Value = $Action     }
+        @{ Name = 'Result';     Value = $Result     }
+        @{ Name = 'Reflection'; Value = $Reflection }
+    )) {
+    if ([string]::IsNullOrWhiteSpace($check.Value)) {
+        [Console]::Error.WriteLine("ERROR: $($check.Name) is required and must not be empty.")
+        exit 1
+    }
+}
+if ($Keywords.Count -eq 0) {
+    [Console]::Error.WriteLine("ERROR: At least one keyword is required for story bank entries.")
+    exit 1
+}
+
 # ConvertTo-Json -InputObject avoids the PS7 gotcha where @() | ConvertTo-Json returns "null"
 $skillsJson   = ConvertTo-Json -InputObject @($Skills)   -Compress
 $keywordsJson = ConvertTo-Json -InputObject @($Keywords) -Compress

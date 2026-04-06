@@ -8,6 +8,15 @@ param (
 
 $ErrorActionPreference = 'Stop'
 
+if ([string]::IsNullOrWhiteSpace($Company)) {
+    [Console]::Error.WriteLine("ERROR: -Company must not be empty or whitespace.")
+    exit 1
+}
+if ([string]::IsNullOrWhiteSpace($Role)) {
+    [Console]::Error.WriteLine("ERROR: -Role must not be empty or whitespace.")
+    exit 1
+}
+
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $dbPath   = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'data\orbit.db'))
 $templatePath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'templates\offer-eval-template.md'))
