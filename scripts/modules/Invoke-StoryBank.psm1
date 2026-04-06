@@ -19,7 +19,8 @@ function Get-RelevantStories {
         Write-Warning "Story bank has fewer than 3 stories ($totalCount total). Add more stories for better interview preparation."
     }
 
-    $kwJson = $JdKeywords | ConvertTo-Json -Compress
+    # ConvertTo-Json -InputObject avoids the PS7 gotcha where @() | ConvertTo-Json returns "null"
+    $kwJson = ConvertTo-Json -InputObject @($JdKeywords) -Compress
 
     $stories = Invoke-SqliteQuery -DataSource $DbPath -Query @"
 SELECT id, title, situation, task, action, result, reflection, keywords,
@@ -52,8 +53,8 @@ function Add-InterviewStory {
     )
     Import-Module PSSQLite -ErrorAction Stop
 
-    $skillsJson   = $Skills   | ConvertTo-Json -Compress
-    $keywordsJson = $Keywords | ConvertTo-Json -Compress
+    $skillsJson   = ConvertTo-Json -InputObject @($Skills)   -Compress
+    $keywordsJson = ConvertTo-Json -InputObject @($Keywords) -Compress
 
     Invoke-SqliteQuery -DataSource $DbPath -Query @"
 INSERT INTO interview_stories

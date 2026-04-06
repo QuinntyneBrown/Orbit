@@ -18,6 +18,14 @@ Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-ArchetypeClassification.p
 Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-CompensationResearch.psm1')    -Force
 Import-Module PSSQLite -ErrorAction Stop
 
+# Stub functions — real implementations use Playwright web automation.
+# Defined here (before first call) because PowerShell scripts execute sequentially
+# and do not hoist function definitions.
+function Invoke-BoardSearch          { param($Board, $Keyword); return @() }
+function Invoke-PortalScan           { param($Account);         return @() }
+function Invoke-RecruiterBoardSearch { param($Recruiter);       return @() }
+function Invoke-OutreachGeneration   { param($Listing, $DbPath) }
+
 # Default: run all modes if no flag specified
 if (-not $BoardSearch -and -not $ScanPortals -and -not $RecruiterBoards) {
     $BoardSearch = $ScanPortals = $RecruiterBoards = $true
@@ -34,11 +42,11 @@ function Assert-SessionIntegrity {
     )
 
     if (-not (Test-Path $ProfilePath)) {
-        Write-Error "Candidate profile not found: $ProfilePath"
+        [Console]::Error.WriteLine("ERROR: Candidate profile not found: $ProfilePath")
         exit 1
     }
     if (-not (Test-Path $BaseResumePath)) {
-        Write-Error "Base resume not found: $BaseResumePath — create it before running a search"
+        [Console]::Error.WriteLine("ERROR: Base resume not found: $BaseResumePath — create it before running a search")
         exit 1
     }
 
@@ -52,7 +60,7 @@ function Assert-SessionIntegrity {
     # Check (d): live read — read first 10 lines to confirm file is not empty/stub
     $lines = Get-Content $BaseResumePath -TotalCount 10
     if (-not $lines) {
-        Write-Error "Base resume appears empty: $BaseResumePath"
+        [Console]::Error.WriteLine("ERROR: Base resume appears empty: $BaseResumePath")
         exit 1
     }
 
@@ -166,8 +174,3 @@ if ($failedScans) {
     $failedScans | ForEach-Object { Write-Host "  $($_.Target): $($_.ErrorCode) — $($_.ErrorMessage)" }
 }
 
-# Stub functions — real implementations use Playwright
-function Invoke-BoardSearch { param($Board, $Keyword); return @() }
-function Invoke-PortalScan  { param($Account);         return @() }
-function Invoke-RecruiterBoardSearch { param($Recruiter); return @() }
-function Invoke-OutreachGeneration   { param($Listing, $DbPath) }

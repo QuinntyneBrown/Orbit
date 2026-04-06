@@ -10,7 +10,8 @@ function New-ScanRun {
         [string]   $DbPath = $script:DefaultDbPath
     )
     Import-Module PSSQLite -ErrorAction Stop
-    $boardsJson = $BoardsSearched | ConvertTo-Json -Compress
+    # ConvertTo-Json -InputObject avoids the PS7 gotcha where @() | ConvertTo-Json returns "null"
+    $boardsJson = ConvertTo-Json -InputObject @($BoardsSearched) -Compress
     Invoke-SqliteQuery -DataSource $DbPath -Query @"
 INSERT INTO scan_runs (run_date, boards_searched) VALUES (date('now'), @boards)
 "@ -SqlParameters @{ boards = $boardsJson }
