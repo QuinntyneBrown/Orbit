@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     notes                 TEXT,
     version               INTEGER NOT NULL DEFAULT 1,
     superseded_by         INTEGER REFERENCES offer_evaluations (id),
+    evaluated_at          TEXT NOT NULL DEFAULT (datetime('now')),
     created_at            TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -60,6 +61,8 @@ CREATE TABLE IF NOT EXISTS scan_runs (
     new_listings     INTEGER NOT NULL DEFAULT 0,
     seen_listings    INTEGER NOT NULL DEFAULT 0,
     boards_searched  TEXT,
+    keywords         TEXT,
+    notes            TEXT,
     created_at       TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -72,16 +75,17 @@ CREATE TABLE IF NOT EXISTS job_listings (
     posted_date           TEXT,
     rate                  TEXT,
     url                   TEXT,
-    archetype             TEXT CHECK (archetype IN (
+    ats_type              TEXT,
+    archetype             TEXT NOT NULL DEFAULT 'Enterprise Contract' CHECK (archetype IN (
                               'Enterprise Contract', 'Product Company',
                               'Consulting Firm', 'AI / Innovation',
                               'Government / Public Sector'
                           )),
-    archetype_inferred    INTEGER NOT NULL DEFAULT 0 CHECK (archetype_inferred IN (0,1)),
+    archetype_inferred    INTEGER NOT NULL DEFAULT 1 CHECK (archetype_inferred IN (0,1)),
     auto_score            REAL,
     is_stale              INTEGER NOT NULL DEFAULT 0 CHECK (is_stale IN (0,1)),
     is_priority_recruiter INTEGER NOT NULL DEFAULT 0 CHECK (is_priority_recruiter IN (0,1)),
-    status                TEXT NOT NULL DEFAULT 'New' CHECK (status IN ('New', 'Seen', 'Applied')),
+    status                TEXT NOT NULL DEFAULT 'New' CHECK (status IN ('New', 'Seen', 'Applied', 'Archived')),
     first_seen_date       TEXT NOT NULL,
     last_seen_date        TEXT NOT NULL,
     UNIQUE (company, title)
@@ -107,10 +111,10 @@ CREATE TABLE IF NOT EXISTS recruiter_contacts (
     firm_name            TEXT NOT NULL UNIQUE,
     contact_name         TEXT,
     contact_linkedin     TEXT,
-    priority_tier        TEXT NOT NULL CHECK (priority_tier IN ('High', 'Medium', 'Low')),
+    priority_tier        TEXT NOT NULL DEFAULT 'Medium' CHECK (priority_tier IN ('High', 'Medium', 'Low')),
     opportunity_page_url TEXT,
     last_contacted_date  TEXT,
-    engagement_status    TEXT CHECK (engagement_status IN ('Active', 'Passive', 'Dormant', 'Closed')),
+    engagement_status    TEXT NOT NULL DEFAULT 'Active' CHECK (engagement_status IN ('Active', 'Passive', 'Dormant', 'Closed')),
     notes                TEXT,
     created_at           TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
@@ -123,8 +127,10 @@ CREATE TABLE IF NOT EXISTS target_accounts (
     ats_type             TEXT CHECK (ats_type IN (
                              'Greenhouse', 'Ashby', 'Lever', 'Wellfound', 'Workable', NULL
                          )),
+    priority             TEXT NOT NULL DEFAULT 'Medium' CHECK (priority IN ('High', 'Medium', 'Low')),
     recruiter_contact_id INTEGER REFERENCES recruiter_contacts (id),
-    notes                TEXT
+    notes                TEXT,
+    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS interview_stories (

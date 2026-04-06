@@ -19,11 +19,10 @@ ALTER TABLE offer_evaluations ADD COLUMN dim_market_demand REAL NOT NULL DEFAULT
 ALTER TABLE outreach_records ADD COLUMN type TEXT NOT NULL DEFAULT 'linkedin-message'
     CHECK(type IN ('linkedin-message','email','follow-up'));
 
--- Feature 11: target_accounts — add company alias and priority column
+-- Feature 11: target_accounts — add company alias column
 -- (existing 'name' column is the company name; 'company' is added as an alias for scripting convenience)
-ALTER TABLE target_accounts ADD COLUMN company  TEXT;
-ALTER TABLE target_accounts ADD COLUMN priority TEXT NOT NULL DEFAULT 'Medium'
-    CHECK(priority IN ('High','Medium','Low'));
+-- NOTE: 'priority' and 'created_at' are already present in the initial schema (migration 0001).
+ALTER TABLE target_accounts ADD COLUMN company TEXT;
 
 -- Feature 06: compensation_estimates — add estimated_at alias for Invoke-CompensationResearch.psm1
 -- (existing researched_date covers this; estimated_at is added for the ON CONFLICT upsert)
