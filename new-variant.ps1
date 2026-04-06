@@ -50,7 +50,7 @@ $existingContent = Get-Content $variantOut -Raw
 $injection = "source_base: focused-base.md`ncompany: `"`"`nrole: `"`"`n"
 if ($existingContent -match '^---') {
     # Insert immediately after the opening --- line, preserving the existing line ending
-    $merged = $existingContent -replace '^---(\r?\n)', "---`$`{1`}$injection"
+    $merged = $existingContent -replace '^---(\r?\n)', "---`$1$injection"
     Set-Content $variantOut -Value $merged -Encoding UTF8 -NoNewline
 } else {
     # No existing front matter — prepend a complete block
