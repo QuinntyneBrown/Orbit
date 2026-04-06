@@ -55,6 +55,11 @@ function Update-RecruiterContact {
         [string] $DbPath = $script:DefaultDbPath
     )
     Import-Module PSSQLite -ErrorAction Stop
+    # Convert empty strings to $null so COALESCE preserves the existing DB value
+    # when the caller omits an optional parameter (PowerShell defaults [string] to '').
+    $contactedParam = if ([string]::IsNullOrEmpty($LastContactedDate)) { $null } else { $LastContactedDate }
+    $statusParam    = if ([string]::IsNullOrEmpty($EngagementStatus))  { $null } else { $EngagementStatus }
+    $notesParam     = if ([string]::IsNullOrEmpty($Notes))             { $null } else { $Notes }
     Invoke-SqliteQuery -DataSource $DbPath -Query @"
 UPDATE recruiter_contacts SET
     last_contacted_date = COALESCE(@contacted, last_contacted_date),
@@ -64,9 +69,9 @@ UPDATE recruiter_contacts SET
 WHERE firm_name = @firm
 "@ -SqlParameters @{
         firm      = $FirmName
-        contacted = $LastContactedDate
-        status    = $EngagementStatus
-        notes     = $Notes
+        contacted = $contactedParam
+        status    = $statusParam
+        notes     = $notesParam
     }
 }
 

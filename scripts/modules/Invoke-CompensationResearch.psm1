@@ -6,7 +6,7 @@ $script:DefaultDbPath = [System.IO.Path]::GetFullPath(
 
 function Test-ExplicitRate {
     param(
-        [Parameter(Mandatory)][string] $RateField,
+        [Parameter(Mandatory)][AllowEmptyString()][string] $RateField,
         [string] $DescriptionBody = ''
     )
     if ([string]::IsNullOrWhiteSpace($RateField)) { return $false }
