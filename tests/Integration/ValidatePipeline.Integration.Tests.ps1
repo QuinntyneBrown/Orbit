@@ -42,7 +42,7 @@ Describe 'Validate-Pipeline — clean data' {
         $db = New-CleanDb
         try {
             $r = Invoke-ValidatePipeline -DbPath $db
-            $r.ExitCode | Should -Be 0
+            $r.ExitCode | Should -Be 0 -Because "Subprocess output: $($r.Output)"
         } finally {
             Remove-Item $db -Force -ErrorAction SilentlyContinue
         }
