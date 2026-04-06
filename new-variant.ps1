@@ -34,6 +34,12 @@ if ((Test-Path $variantOut) -and -not $Force) {
     }
 }
 
+# Ensure output directories exist — both are gitignored and absent on fresh clones
+$tailoredDir = Split-Path $variantOut -Parent
+if (-not (Test-Path $tailoredDir)) {
+    New-Item -ItemType Directory -Path $tailoredDir -Force | Out-Null
+}
+
 Copy-Item -Path $sourceBase -Destination $variantOut -Force
 
 # Inject variant keys (source_base, company, role) required by the pre-commit hook.
@@ -55,6 +61,11 @@ if ($existingContent -match '^---') {
 Write-Host "Created variant: $variantOut"
 
 if ($Notes) {
+    $notesDir = Split-Path $notesOut -Parent
+    if (-not (Test-Path $notesDir)) {
+        New-Item -ItemType Directory -Path $notesDir -Force | Out-Null
+    }
+
     if (-not (Test-Path $notesTemplate)) {
         Write-Warning "Notes template not found at $notesTemplate — creating empty notes file"
         New-Item -ItemType File -Path $notesOut -Force | Out-Null
