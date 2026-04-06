@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# pre-commit hook for Orbit
+# Validates staged files in content/tailored/:
+#   1. YAML front matter must contain source_base, company, role
+#   2. Files must not have outreach name suffixes
+
+set -euo pipefail
+
+VIOLATIONS=0
+
+# Outreach suffixes that must not appear in content/tailored/
+OUTREACH_SUFFIXES=("-linkedin-message" "-email" "-follow-up")
+
+# Get list of staged files under content/tailored/
+STAGED_TAILORED=$(git diff --cached --name-only --diff-filter=ACM | grep '^content/tailored/' || true)
+
+if [ -z "$STAGED_TAILORED" ]; then
+  exit 0
+fi
+
+for filepath in $STAGED_TAILORED; do
+  filename=$(basename "$filepath")
+  basename_no_ext="${filename%.*}"
+
+  # --- Check 2: Reject outreach name suffixes ---
+  for suffix in "${OUTREACH_SUFFIXES[@]}"; do
+    if [[ "$basename_no_ext" == *"$suffix" ]]; then
+      echo "ERROR: Outreach file must not be committed to content/tailored/: $filepath"
+      echo "       Files with suffix '$suffix' belong in content/outreach/ instead."
+      VIOLATIONS=$((VIOLATIONS + 1))
+    fi
+  done
+
+  # --- Check 1: YAML front matter must contain source_base, company, role ---
+  # Only applies to Markdown files
+  if [[ "$filename" == *.md ]]; then
+    # Read the file from the index (staged version)
+    content=$(git show ":$filepath" 2>/dev/null || true)
+
+    if [ -z "$content" ]; then
+      echo "WARNING: Could not read staged content of $filepath, skipping front matter check."
+      continue
+    fi
+
+    # Check that the file starts with ---
+    first_line=$(echo "$content" | head -n 1)
+    if [ "$first_line" != "---" ]; then
+      echo "ERROR: $filepath — missing YAML front matter (file must start with '---')"
+      VIOLATIONS=$((VIOLATIONS + 1))
+      continue
+    fi
+
+    # Extract front matter block (between first and second ---)
+    front_matter=$(echo "$content" | awk '/^---$/{if(++count==2) exit} count==1 && !/^---$/ {print}')
+
+    # Check required keys
+    for key in source_base company role; do
+      if ! echo "$front_matter" | grep -qE "^${key}[[:space:]]*:"; then
+        echo "ERROR: $filepath — YAML front matter is missing required field: '$key'"
+        VIOLATIONS=$((VIOLATIONS + 1))
+      fi
+    done
+  fi
+done
+
+if [ "$VIOLATIONS" -gt 0 ]; then
+  echo ""
+  echo "pre-commit: $VIOLATIONS violation(s) found. Commit rejected."
+  exit 1
+fi
+
+exit 0

@@ -2,30 +2,28 @@
 !theme plain
 skinparam sequenceMessageAlign center
 
-title Save Evaluation — Archive and Persist
+title Save Evaluation — Versioning and DB Persist
 
-participant "Save Invoker" as invoker
-participant "Save-EvaluationReport.psm1" as saver
-participant "File System" as fs
-participant "Pipeline Linker" as linker
+participant "Save-EvaluationToDb" as saver
+database "orbit.db\noffer_evaluations" as EvalDB
+database "orbit.db\npipeline_entries" as PipeDB
 
-invoker -> saver : Save-EvaluationReport\n(sourcePath, company, role)
-saver -> saver : Build target path\ncontent/evaluations/<slug>-eval.md
-saver -> fs : Does target path exist?
-alt File exists
-    fs --> saver : Yes
-    saver -> fs : Rename existing file\n<slug>-eval-<YYYYMMDD>.md
-    fs --> saver : Archive complete
-else File does not exist
-    fs --> saver : No
+saver -> EvalDB : SELECT id, version FROM offer_evaluations\nWHERE company=? AND role=?\nAND superseded_by IS NULL
+
+alt Prior row found (re-evaluation)
+    EvalDB --> saver : { prior_id, prior_version }
+    saver -> EvalDB : INSERT INTO offer_evaluations\n(company, role, eval_date, ...,\nversion = prior_version + 1,\nsuperseded_by = NULL)
+    EvalDB --> saver : new_id
+    saver -> EvalDB : UPDATE offer_evaluations\nSET superseded_by = new_id\nWHERE id = prior_id
+    EvalDB --> saver : 1 row updated
+else No prior row (first evaluation)
+    EvalDB --> saver : (empty)
+    saver -> EvalDB : INSERT INTO offer_evaluations\n(company, role, eval_date, ..., version = 1)
+    EvalDB --> saver : new_id
 end
-saver -> fs : Write new evaluation file\nto target path
-fs --> saver : Write complete
-saver --> invoker : Final saved path
-invoker -> linker : Update-PipelineLink\n(company, role, savedPath)
-linker -> fs : Find matching row\nin data/pipeline.md
-linker -> fs : Replace Report Link\ncolumn value
-fs --> linker : Update written
-linker --> invoker : Pipeline updated
+
+saver -> PipeDB : UPDATE pipeline_entries\nSET eval_id = new_id,\nupdated_at = datetime('now')\nWHERE company=? AND role=?
+PipeDB --> saver : rows affected
+saver --> saver : Return new_id
 
 @enduml

@@ -1,3 +1,6 @@
+# SQLite database (never commit — contains personal job search data)
+data/orbit.db
+
 # Dependencies
 node_modules/
 .pnp

@@ -2,27 +2,32 @@
 !theme plain
 skinparam sequenceMessageAlign center
 
-title Sequence — Deduplication Logic (L2-014)
+title Sequence — Deduplication via SQLite UPSERT (L2-014)
 
 participant "HistoryStore" as Store
-participant "DeduplicationEngine" as Dedup
+database "orbit.db\njob_listings" as DB
 
-Store -> Dedup : Deduplicate(incoming[], existing[])
-Dedup -> Dedup : Normalize keys\n(lowercase, trim whitespace)
-Dedup -> Dedup : Build existingKeyIndex\nfrom existing records
+note over Store, DB
+  Deduplication is handled atomically
+  by the SQLite ON CONFLICT clause.
+  No separate pre-pass needed.
+end note
 
-loop for each incoming result
-    Dedup -> Dedup : key = NormalizeKey(Company, Title)
-    alt key absent from index
-        Dedup -> Dedup : Create ScanRecord\nStatus = New
-    else key present AND existing Status == Applied
-        Dedup -> Dedup : Retain ScanRecord\nStatus = Applied (unchanged)
-    else key present AND existing Status != Applied
-        Dedup -> Dedup : Create ScanRecord\nStatus = Seen
-    end
-end
+Store -> Store : Normalise each result:\n  company = lower(trim(company))\n  title = lower(trim(title))
 
-Dedup -> Dedup : Partition into\nNewRecords, SeenRecords, AppliedRecords
-Dedup --> Store : DeduplicationResult
+Store -> DB : INSERT INTO job_listings (..., status='New', ...)\nON CONFLICT (company, title) DO UPDATE SET\n  status = CASE\n    WHEN excluded.status = 'Applied' THEN 'Applied'\n    ELSE 'Seen'\n  END,\n  last_seen_date = date('now'),\n  scan_run_id = excluded.scan_run_id
+
+note right of DB
+  New listings → status = 'New'
+  Re-seen listings → status = 'Seen'
+  Applied listings → status unchanged
+end note
+
+DB --> Store : rows inserted or updated
+
+Store -> DB : SELECT\n  SUM(CASE WHEN status='New' THEN 1 END) AS new_count,\n  SUM(CASE WHEN status='Seen' THEN 1 END) AS seen_count,\n  SUM(CASE WHEN status='Applied' THEN 1 END) AS applied_count\nFROM job_listings\nWHERE scan_run_id = ?
+
+DB --> Store : DeduplicationResult counts
+Store --> Store : return DeduplicationResult
 
 @enduml

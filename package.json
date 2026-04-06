@@ -1,0 +1,12 @@
+{
+  "name": "orbit",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build-pdf": "node scripts/build-pdf.mjs"
+  },
+  "dependencies": {
+    "marked": "^12.0.0",
+    "playwright": "^1.44.0"
+  }
+}

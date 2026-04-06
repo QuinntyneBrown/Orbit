@@ -4,26 +4,43 @@ skinparam sequenceMessageAlign center
 
 title Evaluate Offer — Main Workflow
 
-actor "Job Seeker" as user
+actor Candidate
 participant "Invoke-OfferEvaluation.ps1" as script
-participant "Template Copier" as copier
-participant "Editor" as editor
-participant "Score Invoker" as scorer
-participant "Save Invoker" as saver
+participant "VS Code / notepad" as editor
+participant "Compute-OfferScore.psm1" as scorer
+participant "Save-EvaluationToDb" as saver
+database "orbit.db" as DB
 
-user -> script : Invoke-OfferEvaluation\n--company Acme --role Architect
-script -> script : Validate params\nGenerate slug
-script -> copier : Copy offer-eval-template.md\nto working path
-copier --> script : Working file path
-script -> editor : Open file in $EDITOR\n(wait for close)
-editor --> user : Template open for editing
-user -> editor : Fill in ratings and notes
+Candidate -> script : Invoke-OfferEvaluation\n--company Acme --role Architect
+script -> script : Copy offer-eval-template.md\nto system temp path
+script -> editor : code <temp-path> (wait for close)
+editor --> Candidate : Temp form open for editing
+Candidate -> editor : Fill in five dimension ratings + notes
 editor --> script : Editor closed
-script -> scorer : Compute-OfferScore\n(working file path)
-scorer --> script : ScoreResult\n(score, label, action)
-script -> saver : Save-EvaluationReport\n(file, company, role)
-saver --> script : Final saved path
-script -> script : Update pipeline.md\nReport Link column
-script --> user : Evaluation complete\nScore: 4.2 — Viable — Review
+
+script -> scorer : Compute-OfferScore\n(five dimension ratings)
+alt Any dimension is NULL/empty
+    scorer --> script : ERROR: missing dimension "<name>"
+    script --> Candidate : Abort — cannot save incomplete evaluation
+else All dimensions provided
+    scorer --> script : { Score=4.2, Label=Viable, Action=Watch }
+
+    script -> saver : Save-EvaluationToDb\n(Company, Role, Dimensions, Score, Notes)
+    saver -> DB : SELECT id FROM offer_evaluations\nWHERE company=? AND role=?\nAND superseded_by IS NULL
+    alt Prior evaluation exists
+        DB --> saver : prior_id
+        saver -> DB : INSERT INTO offer_evaluations (..., version=prior.version+1)
+        DB --> saver : new_id
+        saver -> DB : UPDATE offer_evaluations\nSET superseded_by = new_id\nWHERE id = prior_id
+    else No prior evaluation
+        saver -> DB : INSERT INTO offer_evaluations (..., version=1)
+        DB --> saver : new_id
+    end
+    saver -> DB : UPDATE pipeline_entries\nSET eval_id = new_id\nWHERE company=? AND role=?
+    saver --> script : new_id
+
+    script -> script : Delete temp form file
+    script --> Candidate : Evaluation saved (id=N)\nScore: 4.2 — Viable — Watch
+end
 
 @enduml
