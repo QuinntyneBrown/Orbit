@@ -81,7 +81,8 @@ function New-LinkedInMessage {
     }
     $cta = "I'd welcome the chance to connect and learn more about the role. Are you available for a quick call?"
 
-    $message = "$opening`n`n$value`n`n$cta`n`nBest,`n$CandidateName"
+    $sig     = if ([string]::IsNullOrWhiteSpace($CandidateName)) { '' } else { "`n`nBest,`n$CandidateName" }
+    $message = "$opening`n`n$value`n`n$cta$sig"
 
     return New-OutreachFile -Company $Company -Role $Role -MessageText $message `
         -Type 'linkedin-message' -ListingId $ListingId -DbPath $DbPath

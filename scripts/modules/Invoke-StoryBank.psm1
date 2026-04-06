@@ -10,6 +10,11 @@ function Get-RelevantStories {
         [int]    $TopN   = 5,
         [string] $DbPath = $script:DefaultDbPath
     )
+    # L2-019 AC2: keyword overlap requires at least one keyword to be meaningful
+    if ($JdKeywords.Count -eq 0) {
+        throw "At least one keyword is required to surface relevant stories."
+    }
+
     Import-Module PSSQLite -ErrorAction Stop
 
     $totalCount = (Invoke-SqliteQuery -DataSource $DbPath `
@@ -34,6 +39,12 @@ FROM interview_stories
 ORDER BY overlap_score DESC, id DESC
 LIMIT @topN
 "@ -SqlParameters @{ kwJson = $kwJson; topN = $TopN }
+
+    # L2-019 AC2: warn when fewer than 2 stories have actual keyword overlap
+    $withOverlap = @($stories | Where-Object { $_.overlap_score -gt 0 }).Count
+    if ($withOverlap -lt 2) {
+        Write-Warning "Fewer than 2 stories matched the provided keywords ($withOverlap matched). Add stories with relevant keywords for better interview preparation."
+    }
 
     return $stories
 }
