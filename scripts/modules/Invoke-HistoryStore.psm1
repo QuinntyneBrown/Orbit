@@ -31,6 +31,7 @@ function Invoke-HistoryPersist {
         $company = $r.Company.ToLower().Trim()
         $title   = $r.Title.ToLower().Trim()
 
+        # Check whether the listing is Applied-protected before upserting
         $existingStatus = (Invoke-SqliteQuery -DataSource $DbPath `
             -Query "SELECT status FROM job_listings WHERE company = @c AND title = @t" `
             -SqlParameters @{ c = $company; t = $title }).status
@@ -40,9 +41,10 @@ function Invoke-HistoryPersist {
             continue
         }
 
-        if ($null -eq $existingStatus) {
-            # New listing
-            Invoke-SqliteQuery -DataSource $DbPath -Query @"
+        $isNew = ($null -eq $existingStatus)
+
+        # Atomic upsert: insert new or update last_seen_date / scan_run_id on conflict
+        Invoke-SqliteQuery -DataSource $DbPath -Query @"
 INSERT INTO job_listings
     (scan_run_id, title, company, source, posted_date, rate, url,
      archetype, archetype_inferred, status, is_stale, is_priority_recruiter,
@@ -51,23 +53,19 @@ VALUES
     (@runId, @title, @company, @source, @posted, @rate, @url,
      'Enterprise Contract', 1, 'New', @stale, @priority,
      date('now'), date('now'))
+ON CONFLICT (company, title) DO UPDATE SET
+    last_seen_date        = date('now'),
+    scan_run_id           = excluded.scan_run_id,
+    status                = CASE WHEN status = 'Applied' THEN 'Applied' ELSE 'Seen' END,
+    is_stale              = excluded.is_stale,
+    is_priority_recruiter = excluded.is_priority_recruiter
 "@ -SqlParameters @{
-                runId   = $ScanRunId; title  = $title; company = $company
-                source  = $r.Source; posted = $r.PostedDate; rate = $r.Rate; url = $r.Url
-                stale   = [int]$r.IsStale; priority = [int]$r.IsPriorityRecruiter
-            }
-            $new++
-        } else {
-            # Seen listing
-            Invoke-SqliteQuery -DataSource $DbPath -Query @"
-UPDATE job_listings SET
-    last_seen_date = date('now'),
-    status = CASE WHEN status = 'Applied' THEN 'Applied' ELSE 'Seen' END,
-    scan_run_id = @runId
-WHERE company = @c AND title = @t
-"@ -SqlParameters @{ runId = $ScanRunId; c = $company; t = $title }
-            $seen++
+            runId    = $ScanRunId; title  = $title; company = $company
+            source   = $r.Source; posted = $r.PostedDate; rate = $r.Rate; url = $r.Url
+            stale    = [int]$r.IsStale; priority = [int]$r.IsPriorityRecruiter
         }
+
+        if ($isNew) { $new++ } else { $seen++ }
     }
 
     # Update scan_runs totals
@@ -188,12 +186,15 @@ $($listingBlocks -join "`n")
     $outPath  = Join-Path $ExportDir $filename
     Set-Content -Path $outPath -Value $content -Encoding UTF8
 
-    # Rolling window pruning
-    $files = Get-ChildItem -Path $ExportDir -Filter '*.md' |
-             Sort-Object Name
+    # Rolling window pruning — oldest files first, avoid PowerShell slice bug on single-item arrays
+    $files = @(Get-ChildItem -Path $ExportDir -Filter '*.md' | Sort-Object Name)
     while ($files.Count -gt $window) {
         Remove-Item $files[0].FullName
-        $files = $files[1..($files.Count - 1)]
+        if ($files.Count -gt 1) {
+            $files = $files[1..($files.Count - 1)]
+        } else {
+            $files = @()
+        }
     }
 
     return $outPath

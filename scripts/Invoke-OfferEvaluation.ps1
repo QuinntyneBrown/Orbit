@@ -50,9 +50,6 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
     $proc.WaitForExit()
 }
 
-# Read content then delete temp file in a finally block to ensure cleanup on any error
-$content = Get-Content $tempFile -Raw
-
 function Parse-Rating {
     param([string]$Content, [string]$DimensionLabel)
     # Match lines like: Rating: A  or  Rating: [ A / B / C / Skip ]  with A highlighted
@@ -74,6 +71,9 @@ function Parse-Rating {
 
 $newId = $null
 try {
+    # Read the filled-in form; if this throws the finally block still cleans up the temp file
+    $content = Get-Content $tempFile -Raw
+
     $dims = @{
         TechnicalMatch       = Parse-Rating $content 'Technical Match'
         SeniorityAlignment   = Parse-Rating $content 'Seniority Alignment'

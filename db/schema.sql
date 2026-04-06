@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     archetype_fit         TEXT    NOT NULL CHECK (archetype_fit         IN ('A','B','C','Skip')),
     compensation_fairness TEXT    NOT NULL CHECK (compensation_fairness IN ('A','B','C','Skip')),
     market_demand         TEXT    NOT NULL CHECK (market_demand         IN ('A','B','C','Skip')),
+    -- Legacy numeric dimension columns (added by migration 0002; kept here for schema completeness)
+    dim_technical         REAL    NOT NULL DEFAULT 0.0,
+    dim_seniority         REAL    NOT NULL DEFAULT 0.0,
+    dim_archetype_fit     REAL    NOT NULL DEFAULT 0.0,
+    dim_compensation      REAL    NOT NULL DEFAULT 0.0,
+    dim_market_demand     REAL    NOT NULL DEFAULT 0.0,
     -- Computed score and outcome
     score                 REAL    NOT NULL CHECK (score >= 0.0 AND score <= 5.0),
     label                 TEXT    NOT NULL CHECK (label IN ('Priority', 'Viable', 'Low Fit')),

@@ -35,6 +35,20 @@ if ((Test-Path $variantOut) -and -not $Force) {
 }
 
 Copy-Item -Path $sourceBase -Destination $variantOut -Force
+
+# Prepend variant front matter so the pre-commit hook's required fields (source_base, company, role)
+# are present. The base resume's own front matter (author contact details) is preserved below it.
+$variantFrontMatter = @"
+---
+source_base: focused-base.md
+company: ""
+role: ""
+---
+
+"@
+$existingContent = Get-Content $variantOut -Raw
+Set-Content $variantOut -Value ($variantFrontMatter + $existingContent) -Encoding UTF8 -NoNewline
+
 Write-Host "Created variant: $variantOut"
 
 if ($Notes) {
