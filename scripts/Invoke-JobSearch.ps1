@@ -63,9 +63,9 @@ function Assert-SessionIntegrity {
 Assert-SessionIntegrity -ProfilePath $profilePath -BaseResumePath $baseResumePath
 
 # Load profile
-$profile = Get-Content $profilePath -Raw
+$candidateProfile = Get-Content $profilePath -Raw
 $keywords = @()
-if ($profile -match '(?s)keywords:\s*\n((\s+-\s+.+\n)+)') {
+if ($candidateProfile -match '(?s)keywords:\s*\n((\s+-\s+.+\n)+)') {
     $keywords = $matches[1].Trim() -split '\n' | ForEach-Object { $_.Trim().TrimStart('- ').Trim() }
 }
 

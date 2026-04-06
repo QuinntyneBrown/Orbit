@@ -50,7 +50,7 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
     $proc.WaitForExit()
 }
 
-# Read content before entering try/finally so we can delete in finally
+# Read content then delete temp file in a finally block to ensure cleanup on any error
 $content = Get-Content $tempFile -Raw
 
 function Parse-Rating {
@@ -72,25 +72,27 @@ function Parse-Rating {
     throw "Could not parse rating for dimension '$DimensionLabel' from the evaluation form"
 }
 
-$dims = @{
-    TechnicalMatch       = Parse-Rating $content 'Technical Match'
-    SeniorityAlignment   = Parse-Rating $content 'Seniority Alignment'
-    ArchetypeFit         = Parse-Rating $content 'Archetype Fit'
-    CompensationFairness = Parse-Rating $content 'Compensation Fairness'
-    MarketDemand         = Parse-Rating $content 'Market Demand'
-}
+$newId = $null
+try {
+    $dims = @{
+        TechnicalMatch       = Parse-Rating $content 'Technical Match'
+        SeniorityAlignment   = Parse-Rating $content 'Seniority Alignment'
+        ArchetypeFit         = Parse-Rating $content 'Archetype Fit'
+        CompensationFairness = Parse-Rating $content 'Compensation Fairness'
+        MarketDemand         = Parse-Rating $content 'Market Demand'
+    }
 
-# Extract notes block
-$notes = ''
-if ($content -match '(?s)## Qualitative Notes\s*(.+)$') { $notes = $matches[1].Trim() }
+    # Extract notes block
+    $notes = ''
+    if ($content -match '(?s)## Qualitative Notes\s*(.+)$') { $notes = $matches[1].Trim() }
 
-$scoreResult = Compute-OfferScore @dims
+    $scoreResult = Compute-OfferScore @dims
 
-# Determine new version
-$newVersion = if ($existing) { $existing.version + 1 } else { 1 }
+    # Determine new version
+    $newVersion = if ($existing) { $existing.version + 1 } else { 1 }
 
-# INSERT new evaluation row
-Invoke-SqliteQuery -DataSource $dbPath -Query @"
+    # INSERT new evaluation row
+    Invoke-SqliteQuery -DataSource $dbPath -Query @"
 INSERT INTO offer_evaluations
     (company, role, version, technical_match, seniority_alignment, archetype_fit,
      compensation_fairness, market_demand, dim_technical, dim_seniority, dim_archetype_fit,
@@ -100,36 +102,43 @@ VALUES
      @dtm, @dsa, @daf, @dcf, @dmd,
      @score, @label, @action, @evalDate, @notes)
 "@ -SqlParameters @{
-    company  = $Company;  role      = $Role;       version  = $newVersion
-    tm = $dims.TechnicalMatch;       sa = $dims.SeniorityAlignment
-    af = $dims.ArchetypeFit;         cf = $dims.CompensationFairness
-    md = $dims.MarketDemand
-    dtm = 0.0; dsa = 0.0; daf = 0.0; dcf = 0.0; dmd = 0.0  # legacy numeric cols
-    score    = $scoreResult.Score;  label    = $scoreResult.Label
-    action   = $scoreResult.RecommendedAction;  evalDate = $today;  notes = $notes
+        company  = $Company;  role      = $Role;       version  = $newVersion
+        tm = $dims.TechnicalMatch;       sa = $dims.SeniorityAlignment
+        af = $dims.ArchetypeFit;         cf = $dims.CompensationFairness
+        md = $dims.MarketDemand
+        dtm = 0.0; dsa = 0.0; daf = 0.0; dcf = 0.0; dmd = 0.0  # legacy numeric cols
+        score    = $scoreResult.Score;  label    = $scoreResult.Label
+        action   = $scoreResult.RecommendedAction;  evalDate = $today;  notes = $notes
+    }
+
+    $newId = (Invoke-SqliteQuery -DataSource $dbPath -Query "SELECT last_insert_rowid() AS id").id
+
+    # Link old evaluation via superseded_by
+    if ($existing) {
+        Invoke-SqliteQuery -DataSource $dbPath `
+            -Query "UPDATE offer_evaluations SET superseded_by = @newId WHERE id = @oldId" `
+            -SqlParameters @{ newId = $newId; oldId = $existing.id }
+    }
+
+    # Update pipeline_entries.eval_id
+    $pipelineRow = Invoke-SqliteQuery -DataSource $dbPath `
+        -Query "SELECT id FROM pipeline_entries WHERE company = @c AND role = @r LIMIT 1" `
+        -SqlParameters @{ c = $Company; r = $Role }
+
+    if ($pipelineRow) {
+        Invoke-SqliteQuery -DataSource $dbPath `
+            -Query "UPDATE pipeline_entries SET eval_id = @eid, updated_at = datetime('now') WHERE id = @pid" `
+            -SqlParameters @{ eid = $newId; pid = $pipelineRow.id }
+    } else {
+        Write-Warning "No pipeline entry found for '$Company / $Role' — eval_id not linked"
+    }
+
+    Write-Host "Evaluation saved (id=$newId, v$newVersion): Score=$($scoreResult.Score) [$($scoreResult.Label)] → $($scoreResult.RecommendedAction)"
+} finally {
+    # Always remove the temp file, even if an error occurred during parse or save
+    if (Test-Path $tempFile) {
+        Remove-Item $tempFile -ErrorAction SilentlyContinue
+    }
 }
 
-$newId = (Invoke-SqliteQuery -DataSource $dbPath -Query "SELECT last_insert_rowid() AS id").id
-
-# Link old evaluation via superseded_by
-if ($existing) {
-    Invoke-SqliteQuery -DataSource $dbPath `
-        -Query "UPDATE offer_evaluations SET superseded_by = @newId WHERE id = @oldId" `
-        -SqlParameters @{ newId = $newId; oldId = $existing.id }
-}
-
-# Update pipeline_entries.eval_id
-$pipelineRow = Invoke-SqliteQuery -DataSource $dbPath `
-    -Query "SELECT id FROM pipeline_entries WHERE company = @c AND role = @r LIMIT 1" `
-    -SqlParameters @{ c = $Company; r = $Role }
-
-if ($pipelineRow) {
-    Invoke-SqliteQuery -DataSource $dbPath `
-        -Query "UPDATE pipeline_entries SET eval_id = @eid, updated_at = datetime('now') WHERE id = @pid" `
-        -SqlParameters @{ eid = $newId; pid = $pipelineRow.id }
-} else {
-    Write-Warning "No pipeline entry found for '$Company / $Role' — eval_id not linked"
-}
-
-Write-Host "Evaluation saved (id=$newId, v$newVersion): Score=$($scoreResult.Score) [$($scoreResult.Label)] → $($scoreResult.RecommendedAction)"
 return $newId
