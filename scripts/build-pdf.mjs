@@ -51,7 +51,13 @@ try {
 }
 
 const markdownSource = readFileSync(inputPath, 'utf8');
-const renderedHtml = marked.parse(markdownSource);
+
+// Strip YAML front matter (--- ... ---\n) before parsing so that metadata
+// such as author, email, source_base, company, role does not appear in the
+// rendered PDF. Pandoc strips front matter automatically; marked does not.
+const markdownBody = markdownSource.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+
+const renderedHtml = marked.parse(markdownBody);
 
 // --- Inject into template ---
 const templateHtml = readFileSync(templatePath, 'utf8');
