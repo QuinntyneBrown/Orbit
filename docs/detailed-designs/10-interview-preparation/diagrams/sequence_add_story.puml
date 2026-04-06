@@ -5,22 +5,27 @@ skinparam sequenceMessageAlign center
 title Sequence — Add New Behavioral Story
 
 actor Candidate
-participant "Markdown Editor" as Editor
-participant "story-bank.md" as StoryBank
-participant "job-search Skill" as Skill
+participant "Invoke-AddStory.ps1" as Script
+participant "VS Code / editor" as Editor
+database "orbit.db\ninterview_stories" as DB
 
-Candidate -> Editor : Open interview-prep/story-bank.md
-Editor -> StoryBank : Read existing content
-StoryBank --> Editor : Return current stories
+Candidate -> Script : Invoke-AddStory
+Script -> Script : Copy story-template.md\nto system temp path
+Script -> Editor : code <temp-path> (wait for close)
+Editor --> Candidate : Temp form open for editing
+Candidate -> Editor : Fill in STAR+Reflection block\n(skills, keywords, context tags)
+Editor --> Script : Editor closed
 
-Candidate -> Editor : Append new STAR+Reflection block\n(with skills, keywords, context tags)
-Editor -> StoryBank : Write appended file\n(existing entries unchanged)
-StoryBank --> Editor : Save confirmed
+Script -> Script : Parse title, situation, task,\naction, result, reflection,\nskills[], keywords[], context_tags[]
 
-Candidate -> Skill : Run job-search (next cycle)
-Skill -> StoryBank : Read story bank
-StoryBank --> Skill : Return all stories including new entry
-Skill -> Skill : Validate tags present on all stories
-Skill --> Candidate : Confirm story registered;\nwarn if any story missing required tags
+alt Any required field missing
+    Script --> Candidate : ERROR: missing field "<name>"\nAbort — story not saved
+else All fields present
+    Script -> DB : INSERT INTO interview_stories\n(title, situation, task, action,\nresult, reflection,\nskills_json, keywords_json,\ncontext_tags_json,\ncreated_at = datetime('now'))
+    DB --> Script : new story id
+
+    Script -> Script : Delete temp file
+    Script --> Candidate : Story saved (id=N)\nTitle: <title>
+end
 
 @enduml

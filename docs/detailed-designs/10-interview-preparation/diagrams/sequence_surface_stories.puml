@@ -5,27 +5,27 @@ skinparam sequenceMessageAlign center
 title Sequence — Surface Relevant Stories for Interview/Offer Role
 
 actor Candidate
-participant "job-search Skill" as Skill
-participant "data/pipeline.md" as Pipeline
-participant "story-bank.md" as StoryBank
-participant "evaluations/<slug>.md" as Evaluation
+participant "Invoke-SurfaceStories.ps1" as Script
+database "orbit.db\npipeline_entries\noffer_evaluations\ninterview_stories" as DB
 
-Candidate -> Skill : Run job-search or\ntrigger story surface
-Skill -> Pipeline : Read application states
-Pipeline --> Skill : Return roles list
+Candidate -> Script : Invoke-SurfaceStories
 
-Skill -> Skill : Filter roles in Interview or Offer state
+Script -> DB : SELECT pe.company, pe.role,\n  oe.jd_keywords_json\nFROM pipeline_entries pe\nLEFT JOIN offer_evaluations oe\n  ON pe.eval_id = oe.id\nWHERE pe.status IN ('Interview', 'Offer')
+DB --> Script : qualifying roles[]
 
-loop For each qualifying role
-    Skill -> Evaluation : Read JD and keyword block
-    Evaluation --> Skill : Return JD keywords
-    Skill -> StoryBank : Read all stories
-    StoryBank --> Skill : Return BehavioralStory list
+alt no qualifying roles
+    Script --> Candidate : No roles in Interview or Offer state.
+else roles found
+    loop For each qualifying role
+        Script -> DB : SELECT id, title, keywords_json\nFROM interview_stories
+        DB --> Script : all stories[]
 
-    Skill -> Skill : Count total stories\n(warn if < 3)
-    Skill -> Skill : Score each story by\nkeyword overlap with JD
-    Skill -> Skill : Sort descending; take top 2+
-    Skill --> Candidate : Output role header +\nranked story matches\n+ overlap keyword list
+        Script -> Script : Count total stories\n(warn if < 3)
+        Script -> Script : For each story:\n  overlap = intersect(story.keywords, jd.keywords)\n  score = |overlap|
+        Script -> Script : Sort descending by score;\ntake top N stories
+
+        Script --> Candidate : Output role header +\nranked story matches\n+ overlap keyword list
+    end
 end
 
 @enduml

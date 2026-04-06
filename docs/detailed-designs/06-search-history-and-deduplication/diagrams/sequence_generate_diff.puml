@@ -6,35 +6,32 @@ title Sequence — Generate Run Diff (L2-015)
 
 participant "SearchOrchestrator" as Orch
 participant "DiffGenerator" as Diff
-participant "DatedExportWriter" as Writer
-participant "search-results/" as ExportDir
-participant "RollingWindowManager" as RWM
+database "orbit.db\nscan_runs\njob_listings" as DB
 
-Orch -> Diff : ComputeDiff(currentRecords[])
-Diff -> ExportDir : ListExportFiles(sorted by date desc)
-ExportDir --> Diff : fileList[]
+Orch -> Diff : ComputeDiff(currentScanRunId)
 
-alt fewer than 2 files
+Diff -> DB : SELECT id FROM scan_runs\nORDER BY started_at DESC\nLIMIT 2
+DB --> Diff : [currentRunId, previousRunId] (or just [currentRunId])
+
+alt fewer than 2 scan_runs
     Diff --> Orch : RunDiff { IsFirstRun = true }
 else
-    Diff -> ExportDir : ReadFile(fileList[0]) — previous run
-    ExportDir --> Diff : previousRecords[]
-    Diff -> Diff : previousKeys = KeySet(previousRecords)
-    Diff -> Diff : currentKeys = KeySet(currentRecords)
-    Diff -> Diff : newListings = currentKeys - previousKeys
-    Diff -> Diff : removedListings = previousKeys - currentKeys
+    Diff -> DB : SELECT company, title, status\nFROM job_listings\nWHERE scan_run_id = previousRunId
+    DB --> Diff : previousRecords[]
+
+    Diff -> DB : SELECT company, title, status\nFROM job_listings\nWHERE scan_run_id = currentRunId
+    DB --> Diff : currentRecords[]
+
+    Diff -> Diff : newListings = current - previous (by company+title)
+    Diff -> Diff : removedListings = previous - current (by company+title)
     Diff -> Diff : changedListings = same key, different status
-    Diff --> Orch : RunDiff
+    Diff --> Orch : RunDiff { New, Removed, Changed }
 end
 
-Orch -> Writer : WriteExport(currentRecords, RunDiff)
-Writer -> ExportDir : Write YYYY-MM-DD.md\nwith diff header + listings
-Writer -> RWM : PruneOldFiles()
-RWM -> ExportDir : ListAllExportFiles()
-ExportDir --> RWM : fileList[]
-alt count > 8
-    RWM -> ExportDir : Delete oldest file(s)
-end
-Writer --> Orch : done
+Orch -> DB : SELECT total_results, new_listings, seen_listings\nFROM scan_runs WHERE id = currentScanRunId
+DB --> Orch : scan summary
+
+Orch -> DB : DELETE FROM scan_runs\nWHERE id NOT IN (\n  SELECT id FROM scan_runs\n  ORDER BY started_at DESC\n  LIMIT :resultHistoryWindow\n)
+DB --> Orch : old runs pruned
 
 @enduml

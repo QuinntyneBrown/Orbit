@@ -9,6 +9,7 @@ participant "RateDetector" as Detector
 participant "CompensationResearcher" as Researcher
 participant "RateEstimateFormatter" as Formatter
 participant "job-search Skill" as Skill
+database "orbit.db\ncompensation_estimates" as DB
 
 loop for each listing in resultSet
     Orch -> Detector : HasExplicitRate(listing)
@@ -16,18 +17,30 @@ loop for each listing in resultSet
         Detector --> Orch : true — skip
     else no explicit rate
         Detector --> Orch : false
-        Orch -> Researcher : Research(ResearchRequest)
-        Researcher -> Skill : Query public salary sources\n(title, location, seniority)
-        Skill --> Researcher : ResearchResponse
-        alt dataFound == true
-            Researcher -> Researcher : Parse range, confidence, source
-            Researcher --> Orch : RateEstimate
+
+        Orch -> DB : SELECT low_rate, high_rate, confidence, source_label\nFROM compensation_estimates\nWHERE title = ? AND location = ?\nAND fetched_at >= date('now', '-30 days')
+        alt cached estimate found
+            DB --> Orch : RateEstimate (cached)
             Orch -> Formatter : Format(RateEstimate)
             Formatter --> Orch : "$X–$Y/hr (Confidence) — Source: name"
             Orch -> Orch : listing.RateEstimate = formatted string
-        else no data found
-            Researcher --> Orch : ResearchResponse { DataFound = false }
-            Orch -> Orch : listing.RateEstimate = "No data found"
+        else no cached estimate
+            DB --> Orch : (empty)
+            Orch -> Researcher : Research(ResearchRequest)
+            Researcher -> Skill : Query public salary sources\n(title, location, seniority)
+            Skill --> Researcher : ResearchResponse
+            alt dataFound == true
+                Researcher -> Researcher : Parse range, confidence, source
+                Researcher --> Orch : RateEstimate
+                Orch -> DB : INSERT INTO compensation_estimates\n(title, location, low_rate, high_rate,\nconfidence, source_label, fetched_at)\nON CONFLICT (title, location) DO UPDATE SET\n  low_rate = excluded.low_rate,\n  high_rate = excluded.high_rate,\n  confidence = excluded.confidence,\n  fetched_at = excluded.fetched_at
+                DB --> Orch : upserted
+                Orch -> Formatter : Format(RateEstimate)
+                Formatter --> Orch : "$X–$Y/hr (Confidence) — Source: name"
+                Orch -> Orch : listing.RateEstimate = formatted string
+            else no data found
+                Researcher --> Orch : ResearchResponse { DataFound = false }
+                Orch -> Orch : listing.RateEstimate = "No data found"
+            end
         end
     end
 end
