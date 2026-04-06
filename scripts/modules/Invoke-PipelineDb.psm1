@@ -39,8 +39,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
     # Find migration files relative to this module's location
     $migrationsDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\db\migrations'))
     if (-not (Test-Path $migrationsDir)) {
-        Write-Verbose "Migrations directory not found ($migrationsDir) — skipping migration application."
-        return
+        throw "Migrations directory not found: $migrationsDir — cannot initialise the database. Ensure the repository was cloned completely."
     }
     $migrationFiles = Get-ChildItem -Path $migrationsDir -Filter '*.sql' | Sort-Object Name
 
