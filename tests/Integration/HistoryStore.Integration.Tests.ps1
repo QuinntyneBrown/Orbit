@@ -12,9 +12,31 @@ BeforeAll {
     Import-Module $pipelineModule -Force
     Import-Module $historyModule  -Force
 
-    $script:TempDb     = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.db')
-    $script:ExportDir  = Join-Path ([System.IO.Path]::GetTempPath()) "orbit-export-$(Get-Random)"
+    $script:TempDb    = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.db')
+    $script:ExportDir = Join-Path ([System.IO.Path]::GetTempPath()) "orbit-export-$(Get-Random)"
     Initialize-OrbitDb -DbPath $script:TempDb
+
+    # Helper — must be inside BeforeAll so it is in scope during Run phase (Pester 5)
+    function New-TestListing {
+        param(
+            [string]$Company   = 'Acme',
+            [string]$Title     = 'Software Engineer',
+            [string]$Source    = 'LinkedIn',
+            [string]$Url       = 'https://example.com/job/1',
+            [switch]$IsStale,
+            [switch]$IsPriority
+        )
+        [PSCustomObject]@{
+            Company             = $Company
+            Title               = $Title
+            Source              = $Source
+            Url                 = $Url
+            PostedDate          = $null
+            Rate                = $null
+            IsStale             = $IsStale.IsPresent
+            IsPriorityRecruiter = $IsPriority.IsPresent
+        }
+    }
 }
 
 AfterAll {
@@ -22,28 +44,6 @@ AfterAll {
     Remove-Module Invoke-PipelineDb    -ErrorAction SilentlyContinue
     if (Test-Path $script:TempDb)    { Remove-Item $script:TempDb    -Force -ErrorAction SilentlyContinue }
     if (Test-Path $script:ExportDir) { Remove-Item $script:ExportDir -Recurse -Force -ErrorAction SilentlyContinue }
-}
-
-# Helper — builds a minimal listing object accepted by Invoke-HistoryPersist
-function New-TestListing {
-    param(
-        [string]$Company   = 'Acme',
-        [string]$Title     = 'Software Engineer',
-        [string]$Source    = 'LinkedIn',
-        [string]$Url       = 'https://example.com/job/1',
-        [switch]$IsStale,
-        [switch]$IsPriority
-    )
-    [PSCustomObject]@{
-        Company             = $Company
-        Title               = $Title
-        Source              = $Source
-        Url                 = $Url
-        PostedDate          = $null
-        Rate                = $null
-        IsStale             = $IsStale.IsPresent
-        IsPriorityRecruiter = $IsPriority.IsPresent
-    }
 }
 
 Describe 'New-ScanRun' {
@@ -69,7 +69,6 @@ Describe 'New-ScanRun' {
         $row = Invoke-SqliteQuery -DataSource $script:TempDb `
             -Query "SELECT boards_searched FROM scan_runs WHERE id = @id" `
             -SqlParameters @{ id = $id }
-        # Should be parseable as JSON array
         $result = $row.boards_searched | ConvertFrom-Json
         @($result).Count | Should -Be 0
     }
@@ -102,25 +101,21 @@ Describe 'Invoke-HistoryPersist' {
     }
 
     It 'protects Applied listings — skips upsert and increments AppliedProtected' {
-        # First run: insert listing as New
         $listing = New-TestListing -Company 'ProtectedCo' -Title 'Staff Engineer'
         $run1 = New-ScanRun -DbPath $script:TempDb
         Invoke-HistoryPersist -ScanRunId $run1 -Results @($listing) -DbPath $script:TempDb | Out-Null
 
-        # Mark the listing as Applied manually
         $company = $listing.Company.ToLower().Trim()
         $title   = $listing.Title.ToLower().Trim()
         Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
 UPDATE job_listings SET status = 'Applied' WHERE company = @c AND title = @t
 "@ -SqlParameters @{ c = $company; t = $title }
 
-        # Second run: same listing should be protected
         $run2 = New-ScanRun -DbPath $script:TempDb
         $result = Invoke-HistoryPersist -ScanRunId $run2 -Results @($listing) -DbPath $script:TempDb
         $result.AppliedProtected | Should -Be 1
         $result.New              | Should -Be 0
 
-        # Status should still be Applied
         $row = Invoke-SqliteQuery -DataSource $script:TempDb `
             -Query "SELECT status FROM job_listings WHERE company = @c AND title = @t" `
             -SqlParameters @{ c = $company; t = $title }
@@ -226,16 +221,13 @@ Describe 'Write-SearchExport' {
     }
 
     It 'prunes export files to the rolling window (default 8)' {
-        # Create 10 export files in a dedicated temp dir to test pruning
         $pruneDir = Join-Path ([System.IO.Path]::GetTempPath()) "orbit-prune-$(Get-Random)"
         New-Item -ItemType Directory -Path $pruneDir | Out-Null
         try {
             for ($i = 1; $i -le 10; $i++) {
-                $date = "2025-0$('{0:D2}' -f $i)-01"
-                $fakeFile = Join-Path $pruneDir "$date.md"
-                Set-Content -Path $fakeFile -Value "---`ndate: $date`n---`n"
+                $date = "2025-$('{0:D2}' -f $i)-01"
+                Set-Content -Path (Join-Path $pruneDir "$date.md") -Value "---`ndate: $date`n---`n"
             }
-            # Write one more export via the function — it should prune oldest
             $run = New-ScanRun -DbPath $script:TempDb
             $diff = [PSCustomObject]@{ IsFirstRun = $true; NewListings = 0; RemovedListings = 0; ChangedListings = 0 }
             Write-SearchExport -ScanRunId $run -Diff $diff `
