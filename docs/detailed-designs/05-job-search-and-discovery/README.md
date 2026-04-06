@@ -152,13 +152,13 @@ Execution order: `Priority: High` vendors are searched first. Results from prior
 
 **Responsibility:** Assemble the final Markdown output file
 
-- Writes YAML front-matter with run metadata
-- Groups listings by source
-- Injects `[Stale]`, `[Priority Recruiter]` tags
+- Queries `job_listings WHERE scan_run_id = <current>` to retrieve listing data
+- Renders YAML front-matter from the `scan_runs` row
+- Groups listings by `source` column; flags `is_stale = 1` as `[Stale]` and `is_priority_recruiter = 1` as `[Priority Recruiter]`
 - Appends "Warnings" section for per-keyword zero-match warnings
-- Appends "No portal configured" section for companies missing a career page URL
+- Appends "No portal configured" section for `target_accounts` with NULL `career_page_url`
 - Appends "Failed to scan" section for scan errors (non-200, navigation failures)
-- Writes file to `data/search-results/<YYYY-MM-DD>.md`
+- Delegates to Feature 06's `DatedExportWriter` for file writing and rolling window pruning
 
 ---
 
@@ -201,23 +201,23 @@ Represents a single discovered opportunity.
 
 #### TargetAccount
 
-Represents a company in `docs/target-account-list.md`.
+Maps to `target_accounts` table row (see `db/schema.sql`).
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Company name |
-| `careerPageUrl` | string | URL of careers page |
-| `atsType` | string | Detected ATS platform |
+| `career_page_url` | string | URL of careers page (nullable) |
+| `ats_type` | string | Detected ATS platform |
 
 #### RecruiterVendor
 
-Represents a staffing vendor in `docs/recruiter-vendor-list.md`.
+Maps to `recruiter_contacts` table row.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | string | Vendor name |
-| `opportunityPageUrl` | string | URL of job listings page |
-| `priority` | string | High / Standard |
+| `firm_name` | string | Vendor name |
+| `opportunity_page_url` | string | URL of job listings page |
+| `priority_tier` | string | High / Medium / Low |
 
 #### FailedScan
 

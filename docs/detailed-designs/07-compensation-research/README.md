@@ -2,16 +2,17 @@
 
 ## 1. Overview
 
-Feature 07 enriches job listings within Orbit that do not advertise compensation by performing targeted market rate research and appending a `Rate estimate` field to each affected listing. Estimates include a salary range, a confidence qualifier, and at least one cited source.
+Feature 07 enriches `job_listings` rows that have no explicit `rate` value by performing targeted market rate research and storing results in the `compensation_estimates` table. Estimates include a salary range, a confidence qualifier, and at least one cited source. The database replaces the previous `data/.rate-cache.json` file.
 
 **Stories covered:**
 - **L2-016** — Compensation Research for Unrated Postings: when no explicit rate is present, research and report a range with `High`, `Medium`, or `Low` confidence and a named source. If an explicit rate exists, skip research. If no data is found, record "No data found".
 
 **Design constraints:**
-- File-based; no database server
+- Results stored in `compensation_estimates` table in `data/orbit.db`
 - Research is performed by querying publicly available salary data sources
-- Estimates must never replace an explicit rate already in the listing
-- Confidence must be one of three defined values; free-form qualifiers are not permitted
+- Estimates must never be written for a `job_listings` row that has an explicit `rate` value
+- Confidence must be one of `High`, `Medium`, `Low` — enforced by CHECK constraint in schema
+- Cache invalidation: rows with `researched_date <= date('now', '-30 days')` are re-researched on the next run
 
 ---
 
@@ -60,8 +61,8 @@ Converts a `RateEstimate` into the canonical string `$X–$Y/hr (High|Medium|Low
 
 | Entity | Description |
 |---|---|
-| `JobListing` | Enriched version of a scan record; may carry an explicit `Rate` or a `RateEstimate`. |
-| `RateEstimate` | Holds `RangeLow`, `RangeHigh`, `Currency`, `Unit` (hr/yr), `Confidence`, and `Source`. |
+| `JobListing` | Maps to `job_listings` row. Has an explicit `rate` string (nullable) or a linked `compensation_estimates` row. |
+| `RateEstimate` | Maps to `compensation_estimates` row: `range_low`, `range_high`, `currency`, `unit`, `confidence`, `source`, `researched_date`. |
 | `ConfidenceLevel` | Enum: `High`, `Medium`, `Low`. |
 | `ResearchRequest` | Parameters passed to `CompensationResearcher`: title, location hint, seniority, industry. |
 | `ResearchResponse` | Raw response from the salary data source; parsed into a `RateEstimate` or a no-data sentinel. |
@@ -102,7 +103,7 @@ function Test-ExplicitRate {
 }
 ```
 
-**Caching:** Rate estimates are cached in `data/.rate-cache.json` keyed by `Title + Location`. Cache entries older than 30 days are re-researched on the next run. The cache file must be excluded from version control (`.gitignore`).
+**Caching:** Rate estimates are stored in the `compensation_estimates` table keyed by `listing_id`. The `researched_date` column drives cache invalidation: any row where `researched_date <= date('now', '-30 days')` is treated as stale and re-researched on the next run (UPSERT replaces the existing row). The database is gitignored per L2-024.
 
 **Output format appended to listing (L2-016 AC1–2):**
 ```
