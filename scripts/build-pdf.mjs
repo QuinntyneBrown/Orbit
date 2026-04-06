@@ -44,6 +44,10 @@ let marked;
 try {
   const markedModule = await import('marked');
   marked = markedModule.marked ?? markedModule.default;
+  if (!marked || typeof marked.parse !== 'function') {
+    console.error('Could not resolve marked.parse from "marked" module — unexpected module shape. Run: npm install');
+    process.exit(1);
+  }
 } catch (err) {
   console.error('Failed to import "marked". Run: npm install');
   console.error(err.message);
