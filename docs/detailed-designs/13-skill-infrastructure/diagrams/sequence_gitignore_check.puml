@@ -1,0 +1,28 @@
+@startuml sequence_gitignore_check
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Gitignore Protection Check (Check-Gitignore.ps1)
+
+actor Candidate
+participant "Check-Gitignore.ps1" as Script
+participant "Git" as Git
+participant ".gitignore" as Gitignore
+
+Candidate -> Script : Invoke Check-Gitignore.ps1
+
+Script -> Git : Run: git status --porcelain
+Git --> Script : Return tracked/untracked file list
+
+Script -> Gitignore : Read protected path patterns
+Gitignore --> Script : Return pattern list:\n data/pipeline.md\n data/scan-history.tsv\n data/search-results/\n content/evaluations/\n content/outreach/\n *.env\n config/profile.yml
+
+Script -> Script : Scan git status output\nfor any protected path pattern match
+
+alt No violations found
+    Script --> Candidate : All protected paths are excluded.\nNo action required.
+else Violations found
+    Script --> Candidate : VIOLATIONS DETECTED:\n[list of matched paths]\nAction: add paths to .gitignore\nor remove from tracking\n(git rm --cached <path>)
+end
+
+@enduml

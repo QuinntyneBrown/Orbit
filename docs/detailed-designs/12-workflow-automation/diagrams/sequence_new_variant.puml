@@ -1,0 +1,44 @@
+@startuml sequence_new_variant
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Create a Single Resume Variant (new-variant.ps1)
+
+actor Candidate
+participant "new-variant.ps1" as Script
+participant "content/base/\nquinntyne-brown.md" as Base
+participant "templates/\nnotes-template.md" as Template
+participant "content/tailored/\nquinntyne-brown-<slug>.md" as Variant
+participant "content/notes/\n<slug>.md" as Notes
+
+Candidate -> Script : Invoke: new-variant.ps1 -Name <slug>
+
+Script -> Script : Resolve output path:\ncontent/tailored/quinntyne-brown-<slug>.md
+
+Script -> Variant : Check if file exists
+Variant --> Script : Exists? (true/false)
+
+alt File exists and -Force not set
+    Script --> Candidate : Prompt: "Overwrite existing file? (y/n)"
+    Candidate -> Script : Confirm or cancel
+    alt Cancelled
+        Script --> Candidate : Exit code 1 (user cancelled)
+    end
+end
+
+Script -> Base : Read base resume
+Base --> Script : Return content
+
+Script -> Variant : Write copied content
+Variant --> Script : Write confirmed
+
+alt -Notes flag set
+    Script -> Template : Read notes template
+    Template --> Script : Return scaffold content
+    Script -> Notes : Write notes file
+    Notes --> Script : Write confirmed
+end
+
+Script --> Candidate : Exit code 0 (success)\nReport paths created
+
+@enduml

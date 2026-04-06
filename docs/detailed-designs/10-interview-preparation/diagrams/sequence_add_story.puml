@@ -1,0 +1,26 @@
+@startuml sequence_add_story
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Add New Behavioral Story
+
+actor Candidate
+participant "Markdown Editor" as Editor
+participant "story-bank.md" as StoryBank
+participant "job-search Skill" as Skill
+
+Candidate -> Editor : Open interview-prep/story-bank.md
+Editor -> StoryBank : Read existing content
+StoryBank --> Editor : Return current stories
+
+Candidate -> Editor : Append new STAR+Reflection block\n(with skills, keywords, context tags)
+Editor -> StoryBank : Write appended file\n(existing entries unchanged)
+StoryBank --> Editor : Save confirmed
+
+Candidate -> Skill : Run job-search (next cycle)
+Skill -> StoryBank : Read story bank
+StoryBank --> Skill : Return all stories including new entry
+Skill -> Skill : Validate tags present on all stories
+Skill --> Candidate : Confirm story registered;\nwarn if any story missing required tags
+
+@enduml

@@ -1,0 +1,13 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Feature 10: Interview Preparation
+
+Person(candidate, "Candidate", "Authors and reviews behavioral stories; prepares for interviews.")
+
+System(orbit, "Orbit Career Management", "File-based career management toolset using Markdown, PowerShell, and Claude Code.")
+
+Rel(candidate, orbit, "Writes stories to story bank; reviews surfaced stories before interviews")
+
+@enduml

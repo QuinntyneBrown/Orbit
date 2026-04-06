@@ -1,0 +1,20 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Outreach Management
+
+Container_Boundary(outreachModule, "Outreach Generation Module") {
+    Component(orchestrator, "OutreachOrchestrator", "PowerShell Function", "Entry point; detects --outreach flag, coordinates the pipeline")
+    Component(scoreFilter, "ScoreFilter", "PowerShell Function", "Returns only listings with score >= 4.5 (Strong Match)")
+    Component(msgGenerator, "MessageGenerator", "PowerShell Function", "Composes opening, value proposition, and call to action")
+    Component(filenameBuilder, "FilenameBuilder", "PowerShell Function", "Slugifies company+role; resolves versioned filename on collision")
+    Component(fileWriter, "OutreachFileWriter", "PowerShell Function", "Writes message to content/outreach/; never overwrites")
+}
+
+Rel(orchestrator, scoreFilter, "Filters evaluated listings by threshold")
+Rel(orchestrator, msgGenerator, "Requests message composition for each qualifying listing")
+Rel(orchestrator, filenameBuilder, "Resolves output file path")
+Rel(orchestrator, fileWriter, "Writes composed message to resolved path")
+
+@enduml

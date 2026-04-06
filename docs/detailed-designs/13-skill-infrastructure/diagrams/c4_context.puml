@@ -1,0 +1,16 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Feature 13: Skill Infrastructure
+
+Person(candidate, "Candidate", "Runs the job-search skill; maintains base resume and gitignore rules.")
+
+System(orbit, "Orbit Career Management", "File-based career management toolset using Markdown, PowerShell, and Claude Code.")
+
+System_Ext(git, "Git", "Version control system enforcing .gitignore exclusion rules.")
+
+Rel(candidate, orbit, "Runs skill; reviews validation warnings and search output")
+Rel(orbit, git, "Reads .gitignore rules; queries git status for violation checks")
+
+@enduml

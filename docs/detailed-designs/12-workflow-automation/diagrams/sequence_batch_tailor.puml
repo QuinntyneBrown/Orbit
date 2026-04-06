@@ -1,0 +1,32 @@
+@startuml sequence_batch_tailor
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Batch Tailor Multiple Roles (batch-tailor.ps1)
+
+actor Candidate
+participant "batch-tailor.ps1" as Batch
+participant "Job Pool\n(max 4 concurrent)" as Pool
+participant "new-variant.ps1" as NewVariant
+participant "Claude Code\nTailoring Prompt" as Claude
+
+Candidate -> Batch : Invoke: batch-tailor.ps1 -Roles [role1, role2, ...]
+
+Batch -> Batch : Parse role list;\nrecord start time
+
+loop While roles remaining or jobs running
+    Batch -> Pool : Enqueue next role (if slots available)
+    Pool -> NewVariant : Start background job:\nnew-variant.ps1 -Name <slug>
+    NewVariant --> Pool : Variant file created
+
+    Pool -> Claude : Invoke tailoring prompt\nfor <slug>
+    Claude --> Pool : Tailored variant written
+
+    Pool --> Batch : Job complete: exit code + elapsed time
+    Batch -> Batch : Record JobResult\n(succeeded or failed)
+end
+
+Batch -> Batch : Compute total elapsed time
+Batch --> Candidate : Print BatchReport:\nSucceeded: N | Failed: M\nTotal time: Xs\nFailed roles: [list]
+
+@enduml

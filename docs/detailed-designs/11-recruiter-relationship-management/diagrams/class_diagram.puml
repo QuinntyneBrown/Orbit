@@ -1,0 +1,70 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Feature 11: Recruiter Relationship Management
+
+class RecruiterList {
+    + filePath : string
+    + records : RecruiterRecord[]
+    + load() : void
+    + save() : void
+    + findOverdue(thresholdDays: number) : RecruiterRecord[]
+}
+
+class RecruiterRecord {
+    + firmName : string
+    + priorityTier : PriorityTier
+    + contactName : string
+    + contactLinkedIn : string
+    + lastContactedDate : Date
+    + engagementStatus : EngagementStatus
+    + notes : string
+    + daysSinceContact() : number
+}
+
+enum PriorityTier {
+    HIGH
+    MEDIUM
+    LOW
+}
+
+enum EngagementStatus {
+    ACTIVE
+    PASSIVE
+    DORMANT
+    CLOSED
+}
+
+class TargetAccount {
+    + firmName : string
+    + sector : string
+    + notes : string
+}
+
+class FollowUpReport {
+    + generatedDate : Date
+    + overdueContacts : RecruiterRecord[]
+    + thresholdDays : number
+}
+
+class CrossReferenceReport {
+    + matches : CrossReferenceMatch[]
+    + unlinkedCount : number
+}
+
+class CrossReferenceMatch {
+    + recruiterRecord : RecruiterRecord
+    + targetAccount : TargetAccount
+    + linked : boolean
+}
+
+RecruiterList "1" *-- "many" RecruiterRecord
+RecruiterRecord --> PriorityTier
+RecruiterRecord --> EngagementStatus
+FollowUpReport "1" *-- "many" RecruiterRecord
+CrossReferenceReport "1" *-- "many" CrossReferenceMatch
+CrossReferenceMatch --> RecruiterRecord
+CrossReferenceMatch --> TargetAccount
+
+@enduml

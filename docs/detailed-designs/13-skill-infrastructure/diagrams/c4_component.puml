@@ -1,0 +1,21 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Feature 13: Skill Infrastructure (job-search Skill)
+
+Container_Boundary(jobSkill, "job-search Skill") {
+    Component(startupValidator, "Startup Validator", "JavaScript", "Runs three sequential checks: file existence, staleness, live read. Halts or warns on failure.")
+    Component(outputFormatter, "Output Formatter", "JavaScript", "Writes dated search result files with YAML front-matter and standardized listing blocks.")
+    Component(diffSummarizer, "Diff Summarizer", "JavaScript", "Compares current run listings against previous dated file; appends new/seen summary.")
+}
+
+ContainerDb(baseResume, "Base Resume", "Markdown File", "content/base/quinntyne-brown.md")
+ContainerDb(searchResults, "Search Results", "Markdown Files", "data/search-results/YYYY-MM-DD.md")
+
+Rel(startupValidator, baseResume, "Reads for existence check + live read", "File I/O")
+Rel(outputFormatter, searchResults, "Writes new dated result file", "File I/O")
+Rel(diffSummarizer, searchResults, "Reads previous dated file", "File I/O")
+Rel(diffSummarizer, outputFormatter, "Provides diff data to append")
+
+@enduml

@@ -1,0 +1,41 @@
+@startuml sequence_generate_outreach
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Generate LinkedIn Outreach (L2-018)
+
+participant "OutreachOrchestrator" as Orch
+participant "ScoreFilter" as Filter
+participant "MessageGenerator" as Generator
+participant "FilenameBuilder" as Namer
+participant "OutreachFileWriter" as Writer
+participant "content/outreach/" as Dir
+
+Orch -> Filter : FilterByScore(evaluatedListings, threshold=4.5)
+Filter --> Orch : qualifyingListings[] (score >= 4.5)
+
+loop for each listing in qualifyingListings
+    Orch -> Generator : Compose(OutreachRequest)
+    Generator -> Generator : Build personalised opening\n(role title + company name)
+    Generator -> Generator : Select value proposition\nfrom candidate profile
+    Generator -> Generator : Append call to action
+    Generator --> Orch : LinkedInMessage
+
+    Orch -> Namer : BuildFilename(company, role)
+    Namer -> Namer : Slugify(company + role)
+    Namer -> Dir : FileExists("<company>-<role>-linkedin-message.txt")?
+    alt file does not exist
+        Namer --> Orch : "<company>-<role>-linkedin-message.txt"
+    else file exists
+        Namer -> Namer : Increment version suffix (-v2, -v3 ...)
+        Namer --> Orch : "<company>-<role>-linkedin-message-v2.txt"
+    end
+
+    Orch -> Writer : Write(filePath, message.BodyText)
+    Writer -> Dir : Create file at resolved path
+    Writer --> Orch : OutreachFile record
+end
+
+Orch --> Orch : outreach generation complete
+
+@enduml

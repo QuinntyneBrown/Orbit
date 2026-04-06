@@ -1,0 +1,57 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Feature 12: Workflow Automation
+
+class VariantCreationJob {
+    + slug : string
+    + basePath : string
+    + outputPath : string
+    + notesPath : string
+    + createNotes : boolean
+    + force : boolean
+    + execute() : JobResult
+    + outputExists() : boolean
+}
+
+class BatchTailorSession {
+    + roles : string[]
+    + maxConcurrentJobs : int
+    + jobs : VariantCreationJob[]
+    + results : JobResult[]
+    + startTime : DateTime
+    + run() : BatchReport
+}
+
+class JobResult {
+    + slug : string
+    + exitCode : int
+    + elapsedMs : long
+    + errorMessage : string
+    + succeeded : boolean
+}
+
+class BatchReport {
+    + succeededCount : int
+    + failedCount : int
+    + totalElapsedMs : long
+    + failedSlugs : string[]
+    + print() : void
+}
+
+class ResumeSources {
+    + baseResumePath : string
+    + notesTemplatePath : string
+    + validate() : boolean
+    + baseExists() : boolean
+    + templateExists() : boolean
+}
+
+BatchTailorSession "1" *-- "many" VariantCreationJob
+BatchTailorSession "1" *-- "many" JobResult
+BatchTailorSession --> BatchReport
+VariantCreationJob --> JobResult
+VariantCreationJob --> ResumeSources
+
+@enduml

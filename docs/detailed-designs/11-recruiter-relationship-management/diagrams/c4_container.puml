@@ -1,0 +1,22 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Feature 11: Recruiter Relationship Management
+
+Person(candidate, "Candidate", "Maintains recruiter records; reviews reports.")
+
+System_Boundary(orbit, "Orbit Career Management") {
+    Container(recruiterList, "Recruiter/Vendor List", "Markdown File", "docs/recruiter-vendor-list.md — priority-tiered contact records with engagement status.")
+    Container(targetAccounts, "Target Account List", "Markdown File", "docs/target-accounts.md — companies under active pursuit.")
+    Container(jobSkill, "job-search Skill", "Claude Code / JavaScript", "Reads recruiter and account data; produces follow-up and cross-reference reports.")
+    Container(pipeline, "Application Pipeline", "Markdown File", "data/pipeline.md — active applications linked to recruiter-sourced roles.")
+}
+
+Rel(candidate, recruiterList, "Updates contact records", "Markdown editor")
+Rel(candidate, jobSkill, "Triggers follow-up check", "CLI")
+Rel(jobSkill, recruiterList, "Reads recruiter records", "File I/O")
+Rel(jobSkill, targetAccounts, "Reads target companies", "File I/O")
+Rel(jobSkill, pipeline, "Reads recruiter-sourced roles", "File I/O")
+
+@enduml

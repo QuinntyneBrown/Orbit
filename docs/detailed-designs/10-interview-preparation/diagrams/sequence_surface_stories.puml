@@ -1,0 +1,31 @@
+@startuml sequence_surface_stories
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Surface Relevant Stories for Interview/Offer Role
+
+actor Candidate
+participant "job-search Skill" as Skill
+participant "data/pipeline.md" as Pipeline
+participant "story-bank.md" as StoryBank
+participant "evaluations/<slug>.md" as Evaluation
+
+Candidate -> Skill : Run job-search or\ntrigger story surface
+Skill -> Pipeline : Read application states
+Pipeline --> Skill : Return roles list
+
+Skill -> Skill : Filter roles in Interview or Offer state
+
+loop For each qualifying role
+    Skill -> Evaluation : Read JD and keyword block
+    Evaluation --> Skill : Return JD keywords
+    Skill -> StoryBank : Read all stories
+    StoryBank --> Skill : Return BehavioralStory list
+
+    Skill -> Skill : Count total stories\n(warn if < 3)
+    Skill -> Skill : Score each story by\nkeyword overlap with JD
+    Skill -> Skill : Sort descending; take top 2+
+    Skill --> Candidate : Output role header +\nranked story matches\n+ overlap keyword list
+end
+
+@enduml

@@ -1,0 +1,27 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Feature 10: Interview Preparation (job-search Skill)
+
+Container_Boundary(jobSkill, "job-search Skill") {
+    Component(stateChecker, "State Checker", "JavaScript", "Reads pipeline.md and identifies roles in Interview or Offer state.")
+    Component(storyParser, "Story Parser", "JavaScript", "Parses story-bank.md into structured BehavioralStory objects with tag lists.")
+    Component(keywordExtractor, "Keyword Extractor", "JavaScript", "Extracts JD keywords from the role's evaluation file.")
+    Component(overlapScorer, "Overlap Scorer", "JavaScript", "Computes keyword intersection between each story and the JD; ranks stories.")
+    Component(resultFormatter, "Result Formatter", "JavaScript", "Formats top-N stories for display; prepends warning if story count < 3.")
+}
+
+ContainerDb(storyBank, "Story Bank", "Markdown File", "interview-prep/story-bank.md")
+ContainerDb(pipeline, "Pipeline", "Markdown File", "data/pipeline.md")
+ContainerDb(evaluations, "Evaluations", "Markdown Files", "content/evaluations/")
+
+Rel(stateChecker, pipeline, "Reads", "File I/O")
+Rel(storyParser, storyBank, "Reads", "File I/O")
+Rel(keywordExtractor, evaluations, "Reads", "File I/O")
+Rel(stateChecker, overlapScorer, "Passes role context")
+Rel(storyParser, overlapScorer, "Passes parsed stories")
+Rel(keywordExtractor, overlapScorer, "Passes JD keywords")
+Rel(overlapScorer, resultFormatter, "Passes ranked stories")
+
+@enduml

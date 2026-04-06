@@ -1,0 +1,13 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Feature 11: Recruiter Relationship Management
+
+Person(candidate, "Candidate", "Maintains recruiter contact list and reviews follow-up recommendations.")
+
+System(orbit, "Orbit Career Management", "File-based career management toolset using Markdown, PowerShell, and Claude Code.")
+
+Rel(candidate, orbit, "Updates recruiter records; reviews follow-up and cross-reference reports")
+
+@enduml

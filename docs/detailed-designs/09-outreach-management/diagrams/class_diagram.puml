@@ -1,0 +1,57 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Outreach Management
+
+class EvaluatedListing {
+    +Title : string
+    +Company : string
+    +URL : string
+    +Archetype : string
+    +Score : decimal
+    +IsStrongMatch() : bool
+}
+
+class OutreachRequest {
+    +Listing : EvaluatedListing
+    +CandidateProfile : CandidateProfile
+    +StyleReferences : StyleReference[]
+}
+
+class CandidateProfile {
+    +Name : string
+    +ValueProposition : string
+    +KeySkills : string[]
+    +LoadFromFile(path: string) : CandidateProfile
+}
+
+class StyleReference {
+    +FilePath : string
+    +ExampleText : string
+    +LoadFromFile(path: string) : StyleReference
+}
+
+class LinkedInMessage {
+    +Opening : string
+    +ValueProposition : string
+    +CallToAction : string
+    +BodyText : string
+    +Compose() : string
+}
+
+class OutreachFile {
+    +FilePath : string
+    +Company : string
+    +Role : string
+    +Version : int
+    +CreatedAt : datetime
+}
+
+OutreachRequest "1" --> "1" EvaluatedListing
+OutreachRequest "1" --> "1" CandidateProfile
+OutreachRequest "1" --> "many" StyleReference
+OutreachRequest ..> LinkedInMessage : produces
+LinkedInMessage ..> OutreachFile : written to
+
+@enduml

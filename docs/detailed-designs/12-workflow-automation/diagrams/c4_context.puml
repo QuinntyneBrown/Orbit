@@ -1,0 +1,16 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Feature 12: Workflow Automation
+
+Person(candidate, "Candidate", "Invokes automation scripts to create and tailor resume variants.")
+
+System(orbit, "Orbit Career Management", "File-based career management toolset using Markdown, PowerShell, and Claude Code.")
+
+System_Ext(claudeCode, "Claude Code", "AI assistant that executes tailoring prompts against resume variants.")
+
+Rel(candidate, orbit, "Runs new-variant.ps1 and batch-tailor.ps1")
+Rel(orbit, claudeCode, "Invokes tailoring prompt per role variant")
+
+@enduml

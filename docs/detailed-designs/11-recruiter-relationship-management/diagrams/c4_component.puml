@@ -1,0 +1,24 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Feature 11: Recruiter Relationship Management (job-search Skill)
+
+Container_Boundary(jobSkill, "job-search Skill") {
+    Component(recruiterParser, "Recruiter Parser", "JavaScript", "Parses recruiter-vendor-list.md into RecruiterRecord objects.")
+    Component(followUpChecker, "Follow-Up Checker", "JavaScript", "Identifies High-priority contacts with last contacted date >= 90 days ago.")
+    Component(crossRefLinker, "Cross-Reference Linker", "JavaScript", "Matches recruiter firm names against target account list entries.")
+    Component(reportAssembler, "Report Assembler", "JavaScript", "Merges follow-up and cross-reference results into a single output section.")
+}
+
+ContainerDb(recruiterList, "Recruiter List", "Markdown File", "docs/recruiter-vendor-list.md")
+ContainerDb(targetAccounts, "Target Accounts", "Markdown File", "docs/target-accounts.md")
+
+Rel(recruiterParser, recruiterList, "Reads", "File I/O")
+Rel(crossRefLinker, targetAccounts, "Reads", "File I/O")
+Rel(recruiterParser, followUpChecker, "Passes parsed records")
+Rel(recruiterParser, crossRefLinker, "Passes firm names")
+Rel(followUpChecker, reportAssembler, "Passes overdue contacts")
+Rel(crossRefLinker, reportAssembler, "Passes cross-reference matches")
+
+@enduml

@@ -1,0 +1,29 @@
+@startuml sequence_update_recruiter
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Update a Recruiter Record
+
+actor Candidate
+participant "Markdown Editor" as Editor
+participant "recruiter-vendor-list.md" as RecruiterList
+participant "job-search Skill" as Skill
+
+Candidate -> Editor : Open docs/recruiter-vendor-list.md
+Editor -> RecruiterList : Read current table
+RecruiterList --> Editor : Return all recruiter rows
+
+Candidate -> Editor : Locate recruiter row;\nupdate Last Contacted Date,\nEngagement Status, Notes
+Editor -> RecruiterList : Write updated file
+RecruiterList --> Editor : Save confirmed
+Editor --> Candidate : File saved
+
+note over Candidate : No automated write-back.\nSkill reads updated data on next run.
+
+Candidate -> Skill : Run job-search (next cycle)
+Skill -> RecruiterList : Read updated recruiter list
+RecruiterList --> Skill : Return all records
+Skill -> Skill : Recompute days since contact\nfor all High-priority records
+Skill --> Candidate : Report updated follow-up status
+
+@enduml

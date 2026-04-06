@@ -1,15 +1,15 @@
-# Compensation Research — Detailed Design
+# Feature 07 — Compensation Research — Detailed Design
 
 ## 1. Overview
 
-Feature 07 enriches job listings that do not advertise compensation by performing targeted market rate research and appending a `Rate estimate` field to each affected listing. Estimates include a salary range, a confidence qualifier, and at least one cited source.
+Feature 07 enriches job listings within Orbit that do not advertise compensation by performing targeted market rate research and appending a `Rate estimate` field to each affected listing. Estimates include a salary range, a confidence qualifier, and at least one cited source.
 
 **Stories covered:**
 - **L2-016** — Compensation Research for Unrated Postings: when no explicit rate is present, research and report a range with `High`, `Medium`, or `Low` confidence and a named source. If an explicit rate exists, skip research. If no data is found, record "No data found".
 
 **Design constraints:**
 - File-based; no database server
-- Research is performed via the Claude Code job-search skill querying publicly available salary data
+- Research is performed by querying publicly available salary data sources
 - Estimates must never replace an explicit rate already in the listing
 - Confidence must be one of three defined values; free-form qualifiers are not permitted
 
@@ -40,7 +40,7 @@ Entry point called after the deduplication pass. Iterates over the current resul
 Inspects a listing's `Rate` field (and optionally the description body) to determine whether an explicit compensation figure is already present. Returns `true` if a rate is found, `false` if the field is absent or blank.
 
 ### CompensationResearcher
-Issues a targeted query via the Claude Code job-search skill for publicly available salary data matching the listing's title, industry, and approximate location. Parses the response into a structured `RateEstimate`.
+Issues a targeted query against publicly available salary data sources matching the listing's title, industry, and approximate location. Parses the response into a structured `RateEstimate`.
 
 ### RateEstimateFormatter
 Converts a `RateEstimate` into the canonical string `$X–$Y/hr (High|Medium|Low confidence) — Source: <name>` and attaches it to the listing.
@@ -77,7 +77,7 @@ The orchestrator checks each listing. If a rate is already present, it skips to 
 
 ## 6. Security Considerations
 
-- No salary API credentials are stored in the repository; research queries use the same Claude Code skill invocation pattern as job searching.
+- No salary API credentials are stored in the repository; research queries use publicly accessible data sources only.
 - Compensation estimates are advisory; the candidate should verify before negotiating.
 - The field label (`Rate estimate`) clearly distinguishes inferred data from employer-stated rates.
 

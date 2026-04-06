@@ -1,0 +1,29 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Feature 12: Workflow Automation
+
+Person(candidate, "Candidate", "Invokes scripts and reviews tailored variants.")
+
+System_Boundary(orbit, "Orbit Career Management") {
+    Container(newVariant, "new-variant.ps1", "PowerShell Script", "Creates a single tailored resume variant and optional notes file from base templates.")
+    Container(batchTailor, "batch-tailor.ps1", "PowerShell Script", "Runs new-variant.ps1 + tailoring prompt for multiple roles in parallel (max 4 jobs).")
+    Container(baseResume, "Base Resume", "Markdown File", "content/base/quinntyne-brown.md — canonical source for all variants.")
+    Container(notesTemplate, "Notes Template", "Markdown File", "templates/notes-template.md — scaffold for role-specific notes.")
+    Container(tailoredContent, "Tailored Variants", "Markdown Files", "content/tailored/ — generated role-specific resume variants.")
+    Container(notesContent, "Role Notes", "Markdown Files", "content/notes/ — generated role-specific notes files.")
+}
+
+System_Ext(claudeCode, "Claude Code", "Executes tailoring prompts.")
+
+Rel(candidate, newVariant, "Invokes with -Name <slug>", "PowerShell CLI")
+Rel(candidate, batchTailor, "Invokes with -Roles list", "PowerShell CLI")
+Rel(batchTailor, newVariant, "Spawns as background job per role")
+Rel(newVariant, baseResume, "Copies from", "File I/O")
+Rel(newVariant, notesTemplate, "Copies from (if -Notes)", "File I/O")
+Rel(newVariant, tailoredContent, "Writes variant to", "File I/O")
+Rel(newVariant, notesContent, "Writes notes to", "File I/O")
+Rel(batchTailor, claudeCode, "Invokes tailoring prompt per role")
+
+@enduml

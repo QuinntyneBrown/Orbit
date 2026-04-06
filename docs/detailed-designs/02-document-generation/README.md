@@ -68,7 +68,7 @@ Within the automation layer, the Pandoc invocation component, the Playwright ren
 
 ### 3.3 `scripts/verify-sync.ps1` (Base Resume Sync Check)
 
-- **Inputs:** `content/base/quinntyne-brown.md` and `content/base/quinntyne-brown-full.md`
+- **Inputs:** `content/base/focused-base.md` and `content/base/comprehensive-base.md`
 - **Sections compared:** Current role title, certifications list, contact details (email, phone, LinkedIn URL), dates on most recent roles
 - **Behavior:**
   - Warns (to stderr) for each diverged section

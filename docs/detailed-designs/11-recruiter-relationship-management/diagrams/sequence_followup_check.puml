@@ -1,0 +1,27 @@
+@startuml sequence_followup_check
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Follow-Up Check and Cross-Reference
+
+actor Candidate
+participant "job-search Skill" as Skill
+participant "recruiter-vendor-list.md" as RecruiterList
+participant "target-accounts.md" as TargetAccounts
+
+Candidate -> Skill : Run job-search or\ntrigger recruiter check
+Skill -> RecruiterList : Read all recruiter records
+RecruiterList --> Skill : Return RecruiterRecord list
+
+Skill -> Skill : For each High-priority record:\ncompute days since last contact
+Skill -> Skill : Collect records where\ndays >= 90 → overdue list
+
+Skill -> TargetAccounts : Read target account list
+TargetAccounts --> Skill : Return TargetAccount list
+
+Skill -> Skill : Match firm names\n(case-insensitive) between\nrecruiter list and account list
+Skill -> Skill : Flag unlinked matches\nas action items
+
+Skill --> Candidate : Output "Due for follow-up" section\n(overdue High-priority contacts)\n+ Cross-reference action items
+
+@enduml

@@ -1,0 +1,40 @@
+@startuml sequence_startup_validation
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Sequence — Startup Environment Validation
+
+actor Candidate
+participant "job-search Skill" as Skill
+participant "content/base/\nquinntyne-brown.md" as BaseResume
+
+Candidate -> Skill : Invoke skill
+
+Skill -> BaseResume : Check file exists
+alt File missing
+    BaseResume --> Skill : Not found
+    Skill --> Candidate : ERROR: Base resume missing.\nHalt. (exit code 1)
+end
+
+BaseResume --> Skill : File found
+
+Skill -> BaseResume : Read filesystem mtime
+BaseResume --> Skill : Return last modified date
+
+Skill -> Skill : Compute days since mtime
+alt Older than 90 days
+    Skill --> Candidate : WARNING: Base resume is stale (>90 days).\nContinue anyway? (y/n)
+    Candidate -> Skill : Response
+    alt Cancelled
+        Skill --> Candidate : Halted by user.
+    end
+end
+
+Skill -> BaseResume : Read first 10 lines\n(live file read check)
+BaseResume --> Skill : Return file content
+
+Skill -> Skill : Confirm content is real resume\n(not static summary placeholder)
+
+Skill --> Candidate : All checks passed — proceeding silently.
+
+@enduml

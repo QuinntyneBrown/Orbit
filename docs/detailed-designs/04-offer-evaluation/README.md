@@ -1,8 +1,8 @@
-# Offer Evaluation — Detailed Design
+# Feature 04 — Offer Evaluation — Detailed Design
 
 ## 1. Overview
 
-Feature 04 provides a structured, scored evaluation framework for job postings. Before any tailoring effort is invested, each opportunity is assessed against a defined set of weighted dimensions and assigned a numeric score. Evaluation artifacts are stored per role in a consistent Markdown format and linked from the central pipeline tracker.
+Feature 04 provides a structured, scored evaluation framework for job postings within Orbit. Before any tailoring effort is invested, each opportunity is assessed against a defined set of weighted dimensions and assigned a numeric score. Evaluation artifacts are stored per role in a consistent Markdown format and linked from the central pipeline tracker.
 
 **Scope:**
 - L1-004: Structured evaluation of job postings with weighted scoring
@@ -46,7 +46,7 @@ Responsibilities:
 - Open the file for editing (via `$EDITOR` or VS Code)
 - After editing, invoke the score computation module
 - Call the save/archive module to persist the result
-- Update `data/pipeline.md` with the report link
+- Update the pipeline tracker with the report link
 
 **Parameters:**
 
@@ -112,9 +112,9 @@ Archiving convention: if a file already exists at the target path, it is renamed
 
 ### 3.5 Pipeline Linker
 
-**Responsibility:** Update `data/pipeline.md`
+**Responsibility:** Update the pipeline tracker
 
-Finds the row matching company + role and writes the relative path to the evaluation file in the `Report Link` column. Uses a simple regex-based line replacement — no Markdown parser dependency.
+Finds the row matching company + role and writes the relative path to the evaluation file in the report link column. Uses a simple regex-based line replacement — no Markdown parser dependency.
 
 ---
 
@@ -156,7 +156,7 @@ Represents a completed evaluation artifact. Persisted as a Markdown file with YA
 
 #### PipelineEntry
 
-Represents a row in `data/pipeline.md`.
+Represents a row in the pipeline tracker.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -260,5 +260,5 @@ function Update-PipelineLink {
 |---|----------|--------|
 | 1 | Should the Score Computer support custom weight overrides via a config file? | Open |
 | 2 | Should `Skip`-rated dimensions be excluded from the weighted average rather than scoring 0? | Open |
-| 3 | Should `data/pipeline.md` updates use a dedicated PowerShell module or inline logic? | Open |
-| 4 | Should archived evaluations be listed in the pipeline with a `[Archived]` tag? | Open |
+| 3 | Should pipeline tracker updates use a dedicated PowerShell module or inline logic? | Open |
+| 4 | Should archived evaluations be listed in the pipeline with an `[Archived]` tag? | Open |

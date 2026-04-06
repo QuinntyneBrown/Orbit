@@ -1,0 +1,26 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Feature 13: Skill Infrastructure
+
+Person(candidate, "Candidate", "Runs job-search skill and reviews output.")
+
+System_Boundary(orbit, "Orbit Career Management") {
+    Container(jobSkill, "job-search Skill", "Claude Code / JavaScript", "Validates environment at startup; runs search; writes standardized output.")
+    Container(baseResume, "Base Resume", "Markdown File", "content/base/quinntyne-brown.md — validated at startup for existence and freshness.")
+    Container(searchResults, "Search Results", "Markdown Files", "data/search-results/YYYY-MM-DD.md — dated, machine-parseable output files.")
+    Container(gitignore, ".gitignore", "Git Config File", "Excludes personal data paths from version control.")
+    Container(gitignoreCheck, "Check-Gitignore.ps1", "PowerShell Script", "Diagnostic: scans git status for protected path violations.")
+}
+
+System_Ext(git, "Git", "Version control.")
+
+Rel(candidate, jobSkill, "Triggers search runs", "CLI")
+Rel(jobSkill, baseResume, "Validates existence + freshness at startup", "File I/O")
+Rel(jobSkill, searchResults, "Writes dated result files", "File I/O")
+Rel(git, gitignore, "Enforces exclusion rules")
+Rel(candidate, gitignoreCheck, "Runs diagnostic check", "PowerShell CLI")
+Rel(gitignoreCheck, git, "Reads git status output")
+
+@enduml

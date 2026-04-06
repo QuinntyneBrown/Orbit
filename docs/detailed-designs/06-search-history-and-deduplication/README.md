@@ -1,8 +1,8 @@
-# Search History and Deduplication — Detailed Design
+# Feature 06 — Search History and Deduplication — Detailed Design
 
 ## 1. Overview
 
-Feature 06 provides persistent job search history with intelligent deduplication. After each job search run, the full result set is appended to a TSV history file. Listings are deduplicated by Company + Title across runs, and a human-readable dated export captures net-new, removed, and status-changed listings relative to the previous run.
+Feature 06 provides persistent job search history with intelligent deduplication within Orbit. After each job search run, the full result set is appended to a TSV history file. Listings are deduplicated by Company + Title across runs, and a human-readable dated export captures net-new, removed, and status-changed listings relative to the previous run.
 
 **Stories covered:**
 - **L2-014** — Search Result Persistence: append to `data/scan-history.tsv` with deduplication logic
@@ -79,7 +79,7 @@ Enumerates files matching `data/search-results/*.md`, sorts by name (ISO date), 
 
 ![Persist Results Sequence](diagrams/sequence_persist_results.png)
 
-After each search run, `SearchOrchestrator` passes raw results to `HistoryStore`. The store loads the current TSV, feeds data through `DeduplicationEngine`, merges the tagged records back, and flushes to disk. Records already marked `Applied` are never re-tagged.
+After each search run, the `SearchOrchestrator` passes raw results to `HistoryStore`. The store loads the current TSV, feeds data through `DeduplicationEngine`, merges the tagged records back, and flushes to disk. Records already marked `Applied` are never re-tagged.
 
 ### 5.2 Deduplication
 
@@ -105,7 +105,7 @@ After each search run, `SearchOrchestrator` passes raw results to `HistoryStore`
 
 ## 7. Open Questions
 
-1. Should `scan-history.tsv` be gitignored to avoid leaking employer intelligence in a public fork?
+1. Should `scan-history.tsv` be excluded from version control to avoid leaking employer intelligence in a public fork?
 2. Is 8 the right rolling-window size, or should it be configurable via a setting in `config.json`?
 3. How should URL changes for the same Company+Title be handled — treated as a new listing or as a status change?
 4. Should the diff header distinguish between truly removed listings and listings that moved boards (same title, different URL)?

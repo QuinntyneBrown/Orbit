@@ -1,0 +1,65 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Feature 10: Interview Preparation
+
+class StoryBank {
+    + filePath : string
+    + stories : BehavioralStory[]
+    + load() : void
+    + append(story: BehavioralStory) : void
+    + count() : number
+}
+
+class BehavioralStory {
+    + slug : string
+    + situation : string
+    + task : string
+    + action : string
+    + result : string
+    + reflection : string
+    + skills : string[]
+    + keywords : string[]
+    + context : string
+}
+
+class StoryTag {
+    + value : string
+    + type : TagType
+}
+
+enum TagType {
+    SKILL
+    KEYWORD
+    CONTEXT
+}
+
+class RoleApplication {
+    + slug : string
+    + company : string
+    + title : string
+    + state : string
+    + jdKeywords : string[]
+}
+
+class SurfacingResult {
+    + role : RoleApplication
+    + matches : ScoredStory[]
+    + warned : boolean
+}
+
+class ScoredStory {
+    + story : BehavioralStory
+    + overlapScore : number
+    + matchedKeywords : string[]
+}
+
+StoryBank "1" *-- "many" BehavioralStory
+BehavioralStory "1" *-- "many" StoryTag
+StoryTag --> TagType
+SurfacingResult "1" --> "1" RoleApplication
+SurfacingResult "1" *-- "many" ScoredStory
+ScoredStory "1" --> "1" BehavioralStory
+
+@enduml

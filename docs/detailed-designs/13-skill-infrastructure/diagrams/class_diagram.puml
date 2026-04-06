@@ -1,0 +1,65 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Class Diagram — Feature 13: Skill Infrastructure
+
+class StartupValidationResult {
+    + passed : boolean
+    + checks : ValidationCheck[]
+    + summary() : string
+}
+
+class ValidationCheck {
+    + name : string
+    + passed : boolean
+    + severity : CheckSeverity
+    + message : string
+}
+
+enum CheckSeverity {
+    ERROR
+    WARNING
+    INFO
+}
+
+class SearchRunOutput {
+    + filePath : string
+    + frontMatter : FrontMatter
+    + listings : JobListing[]
+    + diffSummary : string
+    + render() : string
+}
+
+class FrontMatter {
+    + date : string
+    + totalResults : int
+    + boardsSearched : string[]
+    + newListings : int
+    + seenListings : int
+}
+
+class JobListing {
+    + title : string
+    + company : string
+    + source : string
+    + date : string
+    + rate : string
+    + url : string
+    + archetype : string
+    + score : number
+}
+
+class GitignoreStatus {
+    + protectedPaths : string[]
+    + violations : string[]
+    + clean : boolean
+    + report() : string
+}
+
+StartupValidationResult "1" *-- "many" ValidationCheck
+ValidationCheck --> CheckSeverity
+SearchRunOutput "1" *-- "1" FrontMatter
+SearchRunOutput "1" *-- "many" JobListing
+
+@enduml

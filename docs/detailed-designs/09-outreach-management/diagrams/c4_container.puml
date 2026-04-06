@@ -1,0 +1,23 @@
+@startuml c4_container
+!theme plain
+!include <C4/C4_Container>
+
+title C4 Container — Outreach Management
+
+Person(candidate, "Candidate", "Reviews outreach drafts")
+
+System_Boundary(orbit, "Orbit Career Management") {
+    Container(psScripts, "PowerShell Scripts", "PowerShell", "Detects --outreach flag; orchestrates generation pipeline")
+    Container(outreachModule, "Outreach Generation Module", "PowerShell", "Filters by score, composes messages, writes files")
+    ContainerDb(candidateProfile, "Candidate Profile", "Markdown Files", "Profile, skills, and value proposition used to personalise messages")
+    ContainerDb(styleRefs, "content/outreach/examples/", "Text Files", "Example messages providing tone and length reference")
+    ContainerDb(outreachFiles, "content/outreach/", "Text Files", "Generated LinkedIn message drafts, versioned on collision")
+}
+
+Rel(candidate, psScripts, "Passes --outreach flag")
+Rel(psScripts, outreachModule, "Invokes with evaluated result set")
+Rel(outreachModule, candidateProfile, "Reads value proposition and skills")
+Rel(outreachModule, styleRefs, "Reads style reference examples")
+Rel(outreachModule, outreachFiles, "Writes versioned message draft files")
+
+@enduml

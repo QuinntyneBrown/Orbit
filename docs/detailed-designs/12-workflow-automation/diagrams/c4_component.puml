@@ -1,0 +1,25 @@
+@startuml c4_component
+!theme plain
+!include <C4/C4_Component>
+
+title C4 Component — Feature 12: Workflow Automation (batch-tailor.ps1)
+
+Container_Boundary(batchTailor, "batch-tailor.ps1") {
+    Component(inputParser, "Input Parser", "PowerShell", "Parses -Roles array and -MaxJobs parameter; validates inputs.")
+    Component(jobPool, "Job Pool Manager", "PowerShell", "Throttles background jobs to MaxJobs concurrent; monitors completion.")
+    Component(jobWorker, "Job Worker", "PowerShell Background Job", "Calls new-variant.ps1 then Claude Code tailoring prompt for one role slug.")
+    Component(resultCollector, "Result Collector", "PowerShell", "Collects exit codes and elapsed time from each completed job.")
+    Component(reportPrinter, "Report Printer", "PowerShell", "Outputs succeeded count, failed count, and total elapsed time.")
+}
+
+Container(newVariant, "new-variant.ps1", "PowerShell Script", "Creates variant and notes files.")
+System_Ext(claudeCode, "Claude Code", "Tailoring prompt executor.")
+
+Rel(inputParser, jobPool, "Passes role list + concurrency limit")
+Rel(jobPool, jobWorker, "Spawns one worker per role")
+Rel(jobWorker, newVariant, "Calls to create variant")
+Rel(jobWorker, claudeCode, "Invokes tailoring prompt")
+Rel(jobPool, resultCollector, "Passes completed job handles")
+Rel(resultCollector, reportPrinter, "Passes aggregated results")
+
+@enduml

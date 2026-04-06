@@ -1,0 +1,16 @@
+@startuml c4_context
+!theme plain
+!include <C4/C4_Context>
+
+title C4 Context — Outreach Management
+
+Person(candidate, "Candidate", "Reviews and sends LinkedIn outreach messages to recruiters and hiring managers")
+
+System(orbit, "Orbit Career Management", "PowerShell + Node.js toolset that generates personalised LinkedIn message drafts for strong-match listings")
+
+System_Ext(linkedin, "LinkedIn", "Platform where candidate sends outreach messages manually after reviewing drafts")
+
+Rel(candidate, orbit, "Runs scan with --outreach flag; reviews generated message drafts")
+Rel(candidate, linkedin, "Manually sends or adapts generated message drafts")
+
+@enduml
