@@ -56,17 +56,22 @@ function Add-InterviewStory {
     $skillsJson   = ConvertTo-Json -InputObject @($Skills)   -Compress
     $keywordsJson = ConvertTo-Json -InputObject @($Keywords) -Compress
 
-    Invoke-SqliteQuery -DataSource $DbPath -Query @"
+    $conn = New-SQLiteConnection -DataSource $DbPath
+    try {
+        Invoke-SqliteQuery -SQLiteConnection $conn -Query @"
 INSERT INTO interview_stories
     (title, context, situation, task, action, result, reflection, skills, keywords)
 VALUES (@title, @context, @situation, @task, @action, @result, @reflection, @skills, @keywords)
 "@ -SqlParameters @{
-        title = $Title; context = $Context; situation = $Situation; task = $Task
-        action = $Action; result = $Result; reflection = $Reflection
-        skills = $skillsJson; keywords = $keywordsJson
+            title = $Title; context = $Context; situation = $Situation; task = $Task
+            action = $Action; result = $Result; reflection = $Reflection
+            skills = $skillsJson; keywords = $keywordsJson
+        }
+        return [int](Invoke-SqliteQuery -SQLiteConnection $conn `
+            -Query "SELECT last_insert_rowid() AS id").id
+    } finally {
+        $conn.Close()
     }
-
-    return (Invoke-SqliteQuery -DataSource $DbPath -Query "SELECT last_insert_rowid() AS id").id
 }
 
 Export-ModuleMember -Function Get-RelevantStories, Add-InterviewStory

@@ -12,10 +12,16 @@ function New-ScanRun {
     Import-Module PSSQLite -ErrorAction Stop
     # ConvertTo-Json -InputObject avoids the PS7 gotcha where @() | ConvertTo-Json returns "null"
     $boardsJson = ConvertTo-Json -InputObject @($BoardsSearched) -Compress
-    Invoke-SqliteQuery -DataSource $DbPath -Query @"
+    $conn = New-SQLiteConnection -DataSource $DbPath
+    try {
+        Invoke-SqliteQuery -SQLiteConnection $conn -Query @"
 INSERT INTO scan_runs (run_date, boards_searched) VALUES (date('now'), @boards)
 "@ -SqlParameters @{ boards = $boardsJson }
-    return (Invoke-SqliteQuery -DataSource $DbPath -Query "SELECT last_insert_rowid() AS id").id
+        return [int](Invoke-SqliteQuery -SQLiteConnection $conn `
+            -Query "SELECT last_insert_rowid() AS id").id
+    } finally {
+        $conn.Close()
+    }
 }
 
 function Invoke-HistoryPersist {

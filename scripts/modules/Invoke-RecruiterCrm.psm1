@@ -17,18 +17,24 @@ function Add-RecruiterContact {
         [string] $DbPath = $script:DefaultDbPath
     )
     Import-Module PSSQLite -ErrorAction Stop
-    Invoke-SqliteQuery -DataSource $DbPath -Query @"
+    $conn = New-SQLiteConnection -DataSource $DbPath
+    try {
+        Invoke-SqliteQuery -SQLiteConnection $conn -Query @"
 INSERT INTO recruiter_contacts
     (firm_name, contact_name, contact_linkedin, priority_tier,
      opportunity_page_url, last_contacted_date, engagement_status, notes)
 VALUES (@firm, @name, @linkedin, @tier, @url, @contacted, @status, @notes)
 "@ -SqlParameters @{
-        firm      = $FirmName;     name      = $ContactName
-        linkedin  = $ContactLinkedin; tier   = $PriorityTier
-        url       = $OpportunityPageUrl; contacted = $LastContactedDate
-        status    = $EngagementStatus; notes = $Notes
+            firm      = $FirmName;     name      = $ContactName
+            linkedin  = $ContactLinkedin; tier   = $PriorityTier
+            url       = $OpportunityPageUrl; contacted = $LastContactedDate
+            status    = $EngagementStatus; notes = $Notes
+        }
+        return [int](Invoke-SqliteQuery -SQLiteConnection $conn `
+            -Query "SELECT last_insert_rowid() AS id").id
+    } finally {
+        $conn.Close()
     }
-    return (Invoke-SqliteQuery -DataSource $DbPath -Query "SELECT last_insert_rowid() AS id").id
 }
 
 function Update-RecruiterContact {
@@ -98,7 +104,9 @@ function Add-TargetAccount {
         [string] $DbPath = $script:DefaultDbPath
     )
     Import-Module PSSQLite -ErrorAction Stop
-    Invoke-SqliteQuery -DataSource $DbPath -Query @"
+    $conn = New-SQLiteConnection -DataSource $DbPath
+    try {
+        Invoke-SqliteQuery -SQLiteConnection $conn -Query @"
 INSERT INTO target_accounts (name, career_page_url, ats_type, priority, notes)
 VALUES (@company, @url, @ats, @priority, @notes)
 ON CONFLICT (name) DO UPDATE SET
@@ -107,10 +115,14 @@ ON CONFLICT (name) DO UPDATE SET
     priority        = excluded.priority,
     notes           = COALESCE(excluded.notes, notes)
 "@ -SqlParameters @{
-        company  = $Company; url      = $CareerPageUrl
-        ats      = $AtsType; priority = $Priority; notes = $Notes
+            company  = $Company; url      = $CareerPageUrl
+            ats      = $AtsType; priority = $Priority; notes = $Notes
+        }
+        return [int](Invoke-SqliteQuery -SQLiteConnection $conn `
+            -Query "SELECT last_insert_rowid() AS id").id
+    } finally {
+        $conn.Close()
     }
-    return (Invoke-SqliteQuery -DataSource $DbPath -Query "SELECT last_insert_rowid() AS id").id
 }
 
 Export-ModuleMember -Function Add-RecruiterContact, Update-RecruiterContact, Get-FollowUpDue, Set-AccountCrossRef, Add-TargetAccount

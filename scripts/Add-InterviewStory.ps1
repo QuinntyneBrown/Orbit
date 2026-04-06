@@ -48,17 +48,22 @@ if (-not $Keywords) {
 $skillsJson   = ConvertTo-Json -InputObject @($Skills)   -Compress
 $keywordsJson = ConvertTo-Json -InputObject @($Keywords) -Compress
 
-Invoke-SqliteQuery -DataSource $dbPath -Query @"
+$conn = New-SQLiteConnection -DataSource $dbPath
+try {
+    Invoke-SqliteQuery -SQLiteConnection $conn -Query @"
 INSERT INTO interview_stories
     (title, context, situation, task, action, result, reflection, skills, keywords)
 VALUES
     (@title, @context, @situation, @task, @action, @result, @reflection, @skills, @keywords)
 "@ -SqlParameters @{
-    title = $Title; context = $Context; situation = $Situation; task = $Task
-    action = $Action; result = $Result; reflection = $Reflection
-    skills = $skillsJson; keywords = $keywordsJson
+        title = $Title; context = $Context; situation = $Situation; task = $Task
+        action = $Action; result = $Result; reflection = $Reflection
+        skills = $skillsJson; keywords = $keywordsJson
+    }
+    $newId = [int](Invoke-SqliteQuery -SQLiteConnection $conn `
+        -Query "SELECT last_insert_rowid() AS id").id
+} finally {
+    $conn.Close()
 }
-
-$newId = (Invoke-SqliteQuery -DataSource $dbPath -Query "SELECT last_insert_rowid() AS id").id
 Write-Host "Story saved (id=$newId): $Title"
 return $newId

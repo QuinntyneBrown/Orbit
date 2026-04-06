@@ -88,30 +88,35 @@ function Add-PipelineEntry {
         [string]$DbPath = $script:DefaultDbPath
     )
 
-    # Compute next seq_no
-    $maxSeq = Invoke-SqliteQuery -DataSource $DbPath `
-        -Query "SELECT COALESCE(MAX(seq_no), 0) AS max_seq FROM pipeline_entries"
-    $nextSeq = $maxSeq.max_seq + 1
+    # Use a single shared connection so last_insert_rowid() reflects this INSERT,
+    # not a prior operation on a different connection.
+    $conn = New-SQLiteConnection -DataSource $DbPath
+    try {
+        # Compute next seq_no
+        $maxSeq  = Invoke-SqliteQuery -SQLiteConnection $conn `
+            -Query "SELECT COALESCE(MAX(seq_no), 0) AS max_seq FROM pipeline_entries"
+        $nextSeq = $maxSeq.max_seq + 1
 
-    $insertSql = @"
+        Invoke-SqliteQuery -SQLiteConnection $conn -Query @"
 INSERT INTO pipeline_entries (seq_no, applied_date, company, role, source, status, rate, pdf_path, notes)
 VALUES (@seq_no, @applied_date, @company, @role, @source, @status, @rate, @pdf_path, @notes);
-"@
-    Invoke-SqliteQuery -DataSource $DbPath -Query $insertSql -SqlParameters @{
-        seq_no       = $nextSeq
-        applied_date = $AppliedDate
-        company      = $Company
-        role         = $Role
-        source       = $Source
-        status       = $Status
-        rate         = $Rate
-        pdf_path     = $PdfPath
-        notes        = $Notes
-    }
+"@ -SqlParameters @{
+            seq_no       = $nextSeq
+            applied_date = $AppliedDate
+            company      = $Company
+            role         = $Role
+            source       = $Source
+            status       = $Status
+            rate         = $Rate
+            pdf_path     = $PdfPath
+            notes        = $Notes
+        }
 
-    $newRow = Invoke-SqliteQuery -DataSource $DbPath `
-        -Query "SELECT last_insert_rowid() AS id"
-    return [int]$newRow.id
+        return [int](Invoke-SqliteQuery -SQLiteConnection $conn `
+            -Query "SELECT last_insert_rowid() AS id").id
+    } finally {
+        $conn.Close()
+    }
 }
 
 function Update-PipelineStatus {
