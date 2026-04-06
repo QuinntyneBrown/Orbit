@@ -31,7 +31,7 @@ if (-not [System.IO.Path]::IsPathRooted($InputFile)) {
 }
 
 if (-not (Test-Path $InputFile)) {
-    Write-Error "Input file not found: $InputFile"
+    [Console]::Error.WriteLine("ERROR: Input file not found: $InputFile")
     exit 1
 }
 
@@ -45,7 +45,7 @@ if ($normalizedInput.StartsWith($baseContentDir, [System.StringComparison]::Ordi
 } elseif ($normalizedInput.StartsWith($tailoredContentDir, [System.StringComparison]::OrdinalIgnoreCase)) {
     $outputDir = Join-Path $repoRoot 'resumes\tailored'
 } else {
-    Write-Error "InputFile must be under content/base/ or content/tailored/. Got: $InputFile"
+    [Console]::Error.WriteLine("ERROR: InputFile must be under content/base/ or content/tailored/. Got: $InputFile")
     exit 1
 }
 
@@ -57,14 +57,14 @@ if (-not (Test-Path $outputDir)) {
 # --- Check Pandoc is available ---
 $pandocCmd = Get-Command pandoc -ErrorAction SilentlyContinue
 if (-not $pandocCmd) {
-    Write-Error "pandoc is not on PATH. Install Pandoc from https://pandoc.org/installing.html"
+    [Console]::Error.WriteLine("ERROR: pandoc is not on PATH. Install Pandoc from https://pandoc.org/installing.html")
     exit 1
 }
 
 # --- Check reference.docx exists ---
 $referenceDoc = Join-Path $repoRoot 'templates\reference.docx'
 if (-not (Test-Path $referenceDoc)) {
-    Write-Error "templates/reference.docx not found. Place your reference DOCX at: $referenceDoc"
+    [Console]::Error.WriteLine("ERROR: templates/reference.docx not found. Place your reference DOCX at: $referenceDoc")
     exit 1
 }
 
@@ -81,7 +81,7 @@ $pandocArgs = @(
 )
 & pandoc @pandocArgs
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Pandoc exited with code $LASTEXITCODE"
+    [Console]::Error.WriteLine("ERROR: Pandoc exited with code $LASTEXITCODE")
     exit 1
 }
 Write-Host "DOCX built successfully: $outputPath"

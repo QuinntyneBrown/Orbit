@@ -41,7 +41,8 @@ while ($queue.Count -gt 0 -or $jobs.Count -gt 0) {
         if ($j.Job.State -in 'Completed','Failed','Stopped') {
             $output   = Receive-Job -Job $j.Job -ErrorAction SilentlyContinue
             $elapsed  = ((Get-Date) - $j.StartTime).TotalSeconds
-            $exitCode = if ($output -and $output.ExitCode) { $output.ExitCode } else { 1 }
+            # Use explicit null check — ExitCode 0 is falsy but means success
+            $exitCode = if ($null -ne $output -and $null -ne $output.ExitCode) { [int]$output.ExitCode } else { 1 }
             $results += [PSCustomObject]@{
                 Role      = $j.Role
                 ExitCode  = $exitCode

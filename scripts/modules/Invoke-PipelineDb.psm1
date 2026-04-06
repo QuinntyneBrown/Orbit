@@ -7,6 +7,7 @@
     Import this module then call Initialize-OrbitDb before other functions.
 #>
 
+$ErrorActionPreference = 'Stop'
 Import-Module PSSQLite -ErrorAction Stop
 
 $script:DefaultDbPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\data\orbit.db'))
