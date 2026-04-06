@@ -53,9 +53,10 @@ function Add-InterviewStory {
     )
     Import-Module PSSQLite -ErrorAction Stop
 
-    # Spec L2-019 AC1: all STAR fields must be non-empty; keywords require at least one entry
+    # Spec L2-019 AC1: all STAR fields (+ Context) must be non-empty; keywords require at least one entry
     foreach ($field in @(
             @{ Name = 'Title';      Value = $Title      }
+            @{ Name = 'Context';    Value = $Context    }
             @{ Name = 'Situation';  Value = $Situation  }
             @{ Name = 'Task';       Value = $Task       }
             @{ Name = 'Action';     Value = $Action     }

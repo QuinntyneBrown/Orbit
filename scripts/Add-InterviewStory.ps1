@@ -45,9 +45,10 @@ if (-not $Keywords) {
     if ($kwInput) { $Keywords = $kwInput -split ',' | ForEach-Object { $_.Trim() } }
 }
 
-# Spec L2-019 AC1: all STAR fields must be non-empty; at least one keyword required
+# Spec L2-019 AC1: all STAR fields (+ Context) must be non-empty; at least one keyword required
 foreach ($check in @(
         @{ Name = 'Title';      Value = $Title      }
+        @{ Name = 'Context';    Value = $Context    }
         @{ Name = 'Situation';  Value = $Situation  }
         @{ Name = 'Task';       Value = $Task       }
         @{ Name = 'Action';     Value = $Action     }
