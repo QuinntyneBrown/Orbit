@@ -17,7 +17,7 @@ Import-Module (Join-Path $PSScriptRoot 'modules\Invoke-PipelineDb.psm1') -Force
 Import-Module PSSQLite -ErrorAction Stop
 
 if (-not (Test-Path $templatePath)) {
-    Write-Error "Offer evaluation template not found: $templatePath"
+    [Console]::Error.WriteLine("ERROR: Offer evaluation template not found: $templatePath")
     exit 1
 }
 
