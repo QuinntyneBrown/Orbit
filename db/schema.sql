@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS compensation_estimates (
     confidence      TEXT    CHECK (confidence IN ('High', 'Medium', 'Low')),
     source          TEXT    NOT NULL,                       -- "No data found" when unavailable
     researched_date TEXT    NOT NULL,                       -- ISO date; re-research if > 30 days
-    estimated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+    estimated_at    TEXT    NOT NULL DEFAULT ''             -- '' = never researched; always set to datetime('now') by upsert
 );
 
 -- ─── Recruiter contacts ──────────────────────────────────────────────────────

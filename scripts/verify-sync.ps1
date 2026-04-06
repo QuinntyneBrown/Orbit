@@ -21,6 +21,7 @@ $focusedPath = Join-Path $repoRoot 'content\base\focused-base.md'
 $comprehensivePath = Join-Path $repoRoot 'content\base\comprehensive-base.md'
 
 $hasError = $false
+$hasWarn  = $false
 
 function Read-FileOrExit {
     param([string]$Path)
@@ -86,6 +87,7 @@ if ($null -ne $focusedRole) {
         $hasError = $true
     } elseif ($focusedRole -ne $comprehensiveRole) {
         [Console]::Error.WriteLine("WARN: Current role title differs. Focused='$focusedRole' Comprehensive='$comprehensiveRole'")
+        $hasWarn = $true
     }
 }
 
@@ -117,6 +119,7 @@ if ($null -ne $focusedCerts) {
         $hasError = $true
     } elseif ($focusedCerts -ne $comprehensiveCerts) {
         [Console]::Error.WriteLine("WARN: Certifications section content differs between focused and comprehensive resumes.")
+        $hasWarn = $true
     }
 }
 
@@ -132,6 +135,7 @@ foreach ($key in $contactKeys) {
             $hasError = $true
         } elseif ($focusedVal -ne $comprehensiveVal) {
             [Console]::Error.WriteLine("WARN: Contact field '$key' differs. Focused='$focusedVal' Comprehensive='$comprehensiveVal'")
+            $hasWarn = $true
         }
     }
 }
@@ -173,11 +177,12 @@ if ($null -ne $focusedDates) {
         $hasError = $true
     } elseif ($focusedDates -ne $comprehensiveDates) {
         [Console]::Error.WriteLine("WARN: Current role dates differ. Focused='$focusedDates' Comprehensive='$comprehensiveDates'")
+        $hasWarn = $true
     }
 }
 
 # ── Result ───────────────────────────────────────────────────────────────────
-if ($hasError) {
+if ($hasError -or $hasWarn) {
     exit 1
 } else {
     Write-Host "verify-sync: all checks passed."
