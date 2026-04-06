@@ -39,19 +39,20 @@ Describe 'Initialize-OrbitDb' {
         $names | Should -Contain 'schema_migrations'
     }
 
-    It 'records migration versions 1 and 2 as applied' {
+    It 'records migration versions 1, 2, and 3 as applied' {
         $versions = @(Invoke-SqliteQuery -DataSource $script:TempDb `
             -Query "SELECT version FROM schema_migrations ORDER BY version" |
             ForEach-Object { $_.version })
         $versions | Should -Contain 1
         $versions | Should -Contain 2
+        $versions | Should -Contain 3
     }
 
     It 'is idempotent — re-running does not throw or duplicate migrations' {
         { Initialize-OrbitDb -DbPath $script:TempDb } | Should -Not -Throw
         $count = (Invoke-SqliteQuery -DataSource $script:TempDb `
             -Query "SELECT COUNT(*) AS c FROM schema_migrations").c
-        $count | Should -Be 2
+        $count | Should -Be 3
     }
 }
 
@@ -230,5 +231,44 @@ Describe 'Set-PipelinePdfPath' {
             -Query "SELECT pdf_path FROM pipeline_entries WHERE id = @id" `
             -SqlParameters @{ id = $script:PdfEntryId }
         $row.pdf_path | Should -Be 'exports/pdfcorp-architect-v2.pdf'
+    }
+}
+
+Describe 'offer_evaluations DB constraints — L2-009 AC3' {
+    # Acceptance Test
+    # Traces to: L2-009
+    # Description: DB CHECK constraint rejects score < 3.0 with non-Skip recommended_action
+
+    It 'rejects INSERT when score < 3.0 and recommended_action is not Skip' {
+        {
+            Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
+INSERT INTO offer_evaluations
+    (company, role, eval_date, technical_match, seniority_alignment,
+     archetype_fit, compensation_fairness, market_demand, score, label, recommended_action)
+VALUES ('ConstraintTest','Dev','2026-04-01','C','C','C','C','C', 2.0, 'Low Fit', 'Watch')
+"@
+        } | Should -Throw
+    }
+
+    It 'accepts INSERT when score < 3.0 and recommended_action is Skip' {
+        {
+            Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
+INSERT INTO offer_evaluations
+    (company, role, eval_date, technical_match, seniority_alignment,
+     archetype_fit, compensation_fairness, market_demand, score, label, recommended_action)
+VALUES ('ConstraintOk','Dev','2026-04-01','C','C','C','C','C', 2.0, 'Low Fit', 'Skip')
+"@
+        } | Should -Not -Throw
+    }
+
+    It 'accepts INSERT when score >= 3.0 and recommended_action is Watch' {
+        {
+            Invoke-SqliteQuery -DataSource $script:TempDb -Query @"
+INSERT INTO offer_evaluations
+    (company, role, eval_date, technical_match, seniority_alignment,
+     archetype_fit, compensation_fairness, market_demand, score, label, recommended_action)
+VALUES ('ConstraintWatch','Dev','2026-04-01','B','B','B','B','B', 3.5, 'Viable', 'Watch')
+"@
+        } | Should -Not -Throw
     }
 }
