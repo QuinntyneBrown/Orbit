@@ -155,11 +155,12 @@ function Write-SearchExport {
         -SqlParameters @{ id = $ScanRunId }
 
     $boards = if ($run.boards_searched) { $run.boards_searched | ConvertFrom-Json } else { @() }
-    # An empty array must render as "[]" not as blank, which would be invalid YAML
-    $boardsYaml = if ($boards.Count -gt 0) {
-        ($boards | ForEach-Object { "  - $_" }) -join "`n"
+    # Use inline flow style "boards_searched: []" when empty (conventional YAML);
+    # use block sequence style "boards_searched:\n  - item" when non-empty.
+    $boardsYamlLine = if ($boards.Count -gt 0) {
+        "boards_searched:`n" + (($boards | ForEach-Object { "  - $_" }) -join "`n")
     } else {
-        '  []'
+        'boards_searched: []'
     }
 
     $diffBlock = if ($Diff.IsFirstRun) {
@@ -181,8 +182,7 @@ function Write-SearchExport {
 ---
 date: $($run.run_date)
 total_results: $($run.total_results)
-boards_searched:
-$boardsYaml
+$boardsYamlLine
 new_listings: $($run.new_listings)
 seen_listings: $($run.seen_listings)
 ---
