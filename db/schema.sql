@@ -120,7 +120,8 @@ CREATE TABLE IF NOT EXISTS compensation_estimates (
     unit            TEXT    NOT NULL DEFAULT 'hr' CHECK (unit IN ('hr', 'yr')),
     confidence      TEXT    CHECK (confidence IN ('High', 'Medium', 'Low')),
     source          TEXT    NOT NULL,                       -- "No data found" when unavailable
-    researched_date TEXT    NOT NULL                        -- ISO date; re-research if > 30 days
+    researched_date TEXT    NOT NULL,                       -- ISO date; re-research if > 30 days
+    estimated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ─── Recruiter contacts ──────────────────────────────────────────────────────
@@ -144,6 +145,7 @@ CREATE TABLE IF NOT EXISTS recruiter_contacts (
 CREATE TABLE IF NOT EXISTS target_accounts (
     id                   INTEGER PRIMARY KEY AUTOINCREMENT,
     name                 TEXT    NOT NULL UNIQUE,
+    company              TEXT,                              -- alias for 'name'; set by migration 0002
     career_page_url      TEXT,
     ats_type             TEXT    CHECK (ats_type IN (
                              'Greenhouse', 'Ashby', 'Lever', 'Wellfound', 'Workable', NULL
@@ -179,6 +181,8 @@ CREATE TABLE IF NOT EXISTS outreach_records (
     company     TEXT    NOT NULL,
     role        TEXT    NOT NULL,
     file_path   TEXT    NOT NULL,                           -- relative path to .txt file
+    type        TEXT    NOT NULL DEFAULT 'linkedin-message'
+                    CHECK (type IN ('linkedin-message', 'email', 'follow-up')),
     version     INTEGER NOT NULL DEFAULT 1,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
