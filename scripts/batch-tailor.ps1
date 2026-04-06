@@ -24,7 +24,7 @@ while ($queue.Count -gt 0 -or $jobs.Count -gt 0) {
             param($Script, $Role)
             $exitCode = 0
             try {
-                & pwsh -NonInteractive -File $Script -Name $Role -Notes -Force
+                & pwsh -NonInteractive -File $Script -Name "$Role" -Notes -Force
                 $exitCode = $LASTEXITCODE
             } catch {
                 $exitCode = 99
