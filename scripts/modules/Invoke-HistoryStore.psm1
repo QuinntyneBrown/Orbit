@@ -155,7 +155,12 @@ function Write-SearchExport {
         -SqlParameters @{ id = $ScanRunId }
 
     $boards = if ($run.boards_searched) { $run.boards_searched | ConvertFrom-Json } else { @() }
-    $boardsYaml = ($boards | ForEach-Object { "  - $_" }) -join "`n"
+    # An empty array must render as "[]" not as blank, which would be invalid YAML
+    $boardsYaml = if ($boards.Count -gt 0) {
+        ($boards | ForEach-Object { "  - $_" }) -join "`n"
+    } else {
+        '  []'
+    }
 
     $diffBlock = if ($Diff.IsFirstRun) {
         "## Diff`n`nFirst run — no prior results to compare."

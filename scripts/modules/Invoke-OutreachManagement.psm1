@@ -20,6 +20,11 @@ function New-OutreachFile {
         [string] $DbPath    = $script:DefaultDbPath,
         [string] $OutreachDir = $script:OutreachDir
     )
+    $allowedTypes = @('linkedin-message', 'email', 'follow-up')
+    if ($Type -notin $allowedTypes) {
+        throw "Invalid outreach type '$Type'. Must be one of: $($allowedTypes -join ', ')"
+    }
+
     Import-Module PSSQLite -ErrorAction Stop
 
     $companySlug = ConvertTo-Slug $Company

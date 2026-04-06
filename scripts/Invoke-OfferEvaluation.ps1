@@ -90,8 +90,11 @@ try {
     # Determine new version
     $newVersion = if ($existing) { $existing.version + 1 } else { 1 }
 
-    # INSERT new evaluation row
-    Invoke-SqliteQuery -DataSource $dbPath -Query @"
+    # INSERT new evaluation row and fetch its id on the same connection so that
+    # last_insert_rowid() reflects this INSERT, not a prior operation.
+    $evalConn = New-SQLiteConnection -DataSource $dbPath
+    try {
+        Invoke-SqliteQuery -SQLiteConnection $evalConn -Query @"
 INSERT INTO offer_evaluations
     (company, role, version, technical_match, seniority_alignment, archetype_fit,
      compensation_fairness, market_demand, dim_technical, dim_seniority, dim_archetype_fit,
@@ -101,16 +104,19 @@ VALUES
      @dtm, @dsa, @daf, @dcf, @dmd,
      @score, @label, @action, @evalDate, @notes)
 "@ -SqlParameters @{
-        company  = $Company;  role      = $Role;       version  = $newVersion
-        tm = $dims.TechnicalMatch;       sa = $dims.SeniorityAlignment
-        af = $dims.ArchetypeFit;         cf = $dims.CompensationFairness
-        md = $dims.MarketDemand
-        dtm = 0.0; dsa = 0.0; daf = 0.0; dcf = 0.0; dmd = 0.0  # legacy numeric cols
-        score    = $scoreResult.Score;  label    = $scoreResult.Label
-        action   = $scoreResult.RecommendedAction;  evalDate = $today;  notes = $notes
+            company  = $Company;  role      = $Role;       version  = $newVersion
+            tm = $dims.TechnicalMatch;       sa = $dims.SeniorityAlignment
+            af = $dims.ArchetypeFit;         cf = $dims.CompensationFairness
+            md = $dims.MarketDemand
+            dtm = 0.0; dsa = 0.0; daf = 0.0; dcf = 0.0; dmd = 0.0  # legacy numeric cols
+            score    = $scoreResult.Score;  label    = $scoreResult.Label
+            action   = $scoreResult.RecommendedAction;  evalDate = $today;  notes = $notes
+        }
+        $newId = [int](Invoke-SqliteQuery -SQLiteConnection $evalConn `
+            -Query "SELECT last_insert_rowid() AS id").id
+    } finally {
+        $evalConn.Close()
     }
-
-    $newId = (Invoke-SqliteQuery -DataSource $dbPath -Query "SELECT last_insert_rowid() AS id").id
 
     # Link old evaluation via superseded_by
     if ($existing) {
