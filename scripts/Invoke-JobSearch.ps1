@@ -21,10 +21,22 @@ Import-Module PSSQLite -ErrorAction Stop
 # Stub functions — real implementations use Playwright web automation.
 # Defined here (before first call) because PowerShell scripts execute sequentially
 # and do not hoist function definitions.
-function Invoke-BoardSearch          { param($Board, $Keyword); return @() }
-function Invoke-PortalScan           { param($Account);         return @() }
-function Invoke-RecruiterBoardSearch { param($Recruiter);       return @() }
-function Invoke-OutreachGeneration   { param($Listing, $DbPath) }
+# [CmdletBinding()] is required so callers can pass common parameters like -ErrorAction.
+function Invoke-BoardSearch {
+    [CmdletBinding()] param($Board, $Keyword)
+    return @()
+}
+function Invoke-PortalScan {
+    [CmdletBinding()] param($Account)
+    return @()
+}
+function Invoke-RecruiterBoardSearch {
+    [CmdletBinding()] param($Recruiter)
+    return @()
+}
+function Invoke-OutreachGeneration {
+    [CmdletBinding()] param($Listing, $DbPath)
+}
 
 # Default: run all modes if no flag specified
 if (-not $BoardSearch -and -not $ScanPortals -and -not $RecruiterBoards) {

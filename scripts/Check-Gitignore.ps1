@@ -18,8 +18,7 @@ $protectedPaths = @(
     'exports/'
 )
 
-Set-Location $repoRoot
-$gitStatus = git status --porcelain 2>&1
+$gitStatus = git -C $repoRoot status --porcelain 2>&1
 
 $violations = @()
 foreach ($path in $protectedPaths) {
