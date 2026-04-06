@@ -5,7 +5,7 @@
 Feature 09 generates personalised LinkedIn outreach message drafts for high-scoring job listings, organising them in a dedicated directory. Message drafts draw on existing style reference examples and on offer evaluation context to produce personalised, actionable messages.
 
 **Stories covered:**
-- **L2-018** — LinkedIn Outreach Generation: when `--outreach` flag is passed, generate a personalised LinkedIn message draft for each "Strong Match" (score ≥ 4.5) listing, saved to `content/outreach/<company>-<role>-linkedin-message.txt`. Score < 4.5 → no file. Existing file → create with `-v2` suffix (never overwrite).
+- **L2-018** — LinkedIn Outreach Generation: when `--outreach` flag is passed, generate a personalised LinkedIn message draft for each `job_listings` row with `auto_score >= 4.5`. Message text saved to `content/outreach/<company>-<role>-linkedin-message.txt`. Metadata (file path, version, listing FK) saved to `outreach_records` table. Score < 4.5 → no file, no DB row. Version collision resolved via `outreach_records.version`.
 
 **Message requirements:**
 - Personalised opening referencing the specific role and company
@@ -13,9 +13,10 @@ Feature 09 generates personalised LinkedIn outreach message drafts for high-scor
 - Clear call to action
 
 **Design constraints:**
-- Output directory: `content/outreach/`
+- Message text files saved to `content/outreach/`
 - File naming: `<company>-<role>-linkedin-message.txt` (slug-normalised)
-- Never overwrite; version suffix `-v2`, `-v3`, etc. on collision
+- Never overwrite text files; `outreach_records.version` drives the filename suffix (`-v2`, `-v3`)
+- `outreach_records` is the authoritative registry of all generated outreach files
 - Only `--outreach` flag triggers generation; default scan does not produce outreach files
 
 ---
@@ -53,10 +54,10 @@ Composes the LinkedIn message by combining:
 Uses style reference files from `content/outreach/examples/` to match tone and length.
 
 ### FilenameBuilder
-Constructs the output filename from company and role strings: slugifies (lowercase, hyphens), appends `-linkedin-message.txt`. Checks for collisions and appends version suffix if needed.
+Constructs the output filename from company and role strings: slugifies (lowercase, hyphens), appends `-linkedin-message.txt`. Queries `outreach_records` for the current max `version` for the same `listing_id` and appends `-v<N+1>` suffix if a prior version exists.
 
 ### OutreachFileWriter
-Writes the composed message to `content/outreach/`. Never overwrites; always creates a versioned file on collision.
+Writes the composed message text to `content/outreach/`. Never overwrites. After writing, INSERTs a row into `outreach_records` with the file path, listing FK, and version number.
 
 ---
 
@@ -73,7 +74,7 @@ Writes the composed message to `content/outreach/`. Never overwrites; always cre
 | `EvaluatedListing` | A job listing that has been scored; carries a `Score` (decimal 1–5) and archetype. |
 | `OutreachRequest` | Parameters for generating one message: listing details, candidate profile snapshot, style references. |
 | `LinkedInMessage` | Composed message with `Opening`, `ValueProposition`, `CallToAction`, and final `BodyText`. |
-| `OutreachFile` | The persisted file record: `FilePath`, `Company`, `Role`, `Version`, `CreatedAt`. |
+| `OutreachFile` | Maps to `outreach_records` row: `file_path`, `company`, `role`, `version`, `listing_id` FK, `created_at`. Message text is in the file at `file_path`. |
 | `StyleReference` | An example message from `content/outreach/examples/` used as tone and length guidance. |
 
 ---

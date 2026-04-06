@@ -11,9 +11,9 @@ Feature 13 provides foundational infrastructure for the job-search Claude Code s
 | L1-013 | Validate runtime environment at startup: base resume exists, is current, profile data is live. |
 | L1-014 | Write each search run's results to a dated file, maintain rolling history, produce diff summary. |
 | L1-015 | Protect personal data files from accidental exposure in public repositories. |
-| L2-023 | Verify: (a) `content/base/base-resume.md` exists, (b) last modified within 90 days, (c) skill reads actual file at runtime. Fail if missing; warn+prompt if stale; proceed silently if OK. |
-| L2-024 | `.gitignore` must exclude: `data/pipeline.md`, `data/scan-history.tsv`, `data/search-results/`, `content/evaluations/`, `content/outreach/`, `*.env`, `config/profile.yml`. These must not appear as tracked or untracked in `git status`. |
-| L2-026 | Output in consistent machine-parseable Markdown with YAML front-matter (`date`, `total_results`, `boards_searched`, `new_listings`, `seen_listings`) and per-listing blocks (`title`, `company`, `source`, `date`, `rate`, `url`, `archetype`, `score`). |
+| L2-023 | Verify: (a) `content/base/base-resume.md` exists, (b) last modified within 90 days, (c) `data/orbit.db` is reachable and all migrations applied, (d) skill reads actual file at runtime. Fail if missing; warn+prompt if stale; initialize DB if absent. |
+| L2-024 | `.gitignore` must exclude: `data/orbit.db`, `data/search-results/`, `content/tailored/`, `content/outreach/`, `content/notes/`, `*.env`, `config/profile.yml`, `resumes/`, `exports/`. These must not appear as tracked or untracked in `git status`. |
+| L2-026 | Export output in consistent machine-parseable Markdown generated from DB queries, with YAML front-matter (`date`, `total_results`, `boards_searched`, `new_listings`, `seen_listings`) sourced from `scan_runs` row, and per-listing blocks from `job_listings`. |
 
 **Out of scope:** Remote secrets management, encrypted storage, CI/CD pipeline integration.
 

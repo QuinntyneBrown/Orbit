@@ -20,7 +20,7 @@ Feature 08 classifies every discovered job posting into exactly one of five role
 Unknown postings default to `Enterprise Contract` with `[Archetype: inferred]` flag.
 
 **Design constraints:**
-- Every listing must carry exactly one archetype
+- Every `job_listings` row must carry exactly one archetype (NULL not permitted after classification)
 - Classification is deterministic given the listing content
 - No external API calls; classification uses keyword heuristics against title and description
 
@@ -48,7 +48,7 @@ Unknown postings default to `Enterprise Contract` with `[Archetype: inferred]` f
 
 **Module:** `scripts/modules/Invoke-ArchetypeClassification.psm1`
 
-Iterates the post-deduplication result set and dispatches each listing to the classifier. Stores the archetype and any flags back onto the listing record.
+Iterates `job_listings` rows for the current `scan_run_id` where `archetype IS NULL` and dispatches each to the classifier. Updates the `archetype`, `archetype_inferred`, and `is_priority_recruiter` columns via UPDATE after classification.
 
 ### 3.2 ArchetypeClassifier
 Applies a prioritised keyword rule set against the listing title, company name, and description body. Returns an `ArchetypeResult` containing the matched archetype and a boolean `isInferred` flag.
@@ -88,7 +88,7 @@ Post-processes the classified listing to apply archetype-specific side effects: 
 
 | Entity | Description |
 |---|---|
-| `JobListing` | Extended with `Archetype` and `ArchetypeFlags` fields after classification. |
+| `JobListing` | Maps to `job_listings` row. `archetype` and `archetype_inferred` columns are set by classification. |
 | `ArchetypeResult` | Output of classification: the matched `Archetype` enum value and `IsInferred` boolean. |
 | `Archetype` | Enum of the five defined archetypes plus an `Unknown` sentinel. |
 | `ArchetypeRule` | One rule in the rule set: a priority rank, a list of keyword patterns, and a target archetype. |
