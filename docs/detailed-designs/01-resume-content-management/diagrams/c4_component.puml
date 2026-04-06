@@ -5,8 +5,8 @@
 title C4 Component — Resume Content Management
 
 Container_Boundary(content, "Content Layer") {
-    Component(focused, "quinntyne-brown.md", "Markdown", "Focused base resume — default for most tailored variants")
-    Component(full, "quinntyne-brown-full.md", "Markdown", "Comprehensive base resume — used for roles requiring full history")
+    Component(focused, "base-resume.md", "Markdown", "Focused base resume — default for most tailored variants")
+    Component(full, "base-resume-full.md", "Markdown", "Comprehensive base resume — used for roles requiring full history")
     Component(variant, "TailoredVariant", "Markdown", "Role-specific resume derived from one base file; stored in content/tailored/")
     Component(notes, "NotesFile", "Markdown", "Per-role notes conforming to notes-template.md; stored in content/notes/")
     Component(outreach, "OutreachFile", "Markdown/Text", "Messages and emails in content/outreach/; never in content/tailored/")

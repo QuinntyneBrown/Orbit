@@ -11,7 +11,7 @@ Feature 13 provides foundational infrastructure for the job-search Claude Code s
 | L1-013 | Validate runtime environment at startup: base resume exists, is current, profile data is live. |
 | L1-014 | Write each search run's results to a dated file, maintain rolling history, produce diff summary. |
 | L1-015 | Protect personal data files from accidental exposure in public repositories. |
-| L2-023 | Verify: (a) `content/base/quinntyne-brown.md` exists, (b) last modified within 90 days, (c) skill reads actual file at runtime. Fail if missing; warn+prompt if stale; proceed silently if OK. |
+| L2-023 | Verify: (a) `content/base/base-resume.md` exists, (b) last modified within 90 days, (c) skill reads actual file at runtime. Fail if missing; warn+prompt if stale; proceed silently if OK. |
 | L2-024 | `.gitignore` must exclude: `data/pipeline.md`, `data/scan-history.tsv`, `data/search-results/`, `content/evaluations/`, `content/outreach/`, `*.env`, `config/profile.yml`. These must not appear as tracked or untracked in `git status`. |
 | L2-026 | Output in consistent machine-parseable Markdown with YAML front-matter (`date`, `total_results`, `boards_searched`, `new_listings`, `seen_listings`) and per-listing blocks (`title`, `company`, `source`, `date`, `rate`, `url`, `archetype`, `score`). |
 
@@ -45,7 +45,7 @@ Three independent components handle startup validation, gitignore enforcement ch
 
 ### Startup Validator (inside job-search skill)
 
-- **Check (a) — File Existence:** Resolves `content/base/quinntyne-brown.md`. If missing: emit error and halt with non-zero exit code.
+- **Check (a) — File Existence:** Resolves `content/base/base-resume.md`. If missing: emit error and halt with non-zero exit code.
 - **Check (b) — Staleness:** Reads filesystem `mtime` of base resume. If older than 90 days from today: emit warning and prompt candidate to confirm continuation. If confirmed, proceed; otherwise halt.
 - **Check (c) — Live Read:** Reads the first 10 lines of the file at runtime to confirm it is not a static summary. Proceeds silently if all checks pass.
 
@@ -113,7 +113,7 @@ The optional `Check-Gitignore.ps1` script runs `git status` and scans output for
 
 | # | Question | Owner | Status |
 |---|----------|-------|--------|
-| 1 | Should the 90-day staleness threshold be configurable in `config/profile.yml`? | Quinntyne | Open |
-| 2 | Should `Check-Gitignore.ps1` run automatically as a pre-commit hook? | Quinntyne | Open |
-| 3 | Should the diff summary compare against the previous calendar-day file or the most recent existing file? | Quinntyne | Open |
-| 4 | How many dated result files should be retained before old ones are pruned (rolling window size)? | Quinntyne | Open |
+| 1 | Should the 90-day staleness threshold be configurable in `config/profile.yml`? | — | Open |
+| 2 | Should `Check-Gitignore.ps1` run automatically as a pre-commit hook? | — | Open |
+| 3 | Should the diff summary compare against the previous calendar-day file or the most recent existing file? | — | Open |
+| 4 | How many dated result files should be retained before old ones are pruned (rolling window size)? | — | Open |

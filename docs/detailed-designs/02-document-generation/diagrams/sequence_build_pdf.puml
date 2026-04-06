@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Build PDF Resume
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "build-pdf.mjs" as Script
 participant "templates/resume.html" as Template
 participant "Playwright\n(Chromium)" as Browser

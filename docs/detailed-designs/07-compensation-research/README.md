@@ -33,16 +33,19 @@ Feature 07 enriches job listings within Orbit that do not advertise compensation
 
 ## 3. Component Details
 
-### CompensationResearchOrchestrator
+### 3.1 CompensationResearchOrchestrator
+
+**Module:** `scripts/modules/Invoke-CompensationResearch.psm1`
+
 Entry point called after the deduplication pass. Iterates over the current result set, identifies listings with no rate, and dispatches research requests.
 
-### RateDetector
+### 3.2 RateDetector
 Inspects a listing's `Rate` field (and optionally the description body) to determine whether an explicit compensation figure is already present. Returns `true` if a rate is found, `false` if the field is absent or blank.
 
-### CompensationResearcher
+### 3.3 CompensationResearcher
 Issues a targeted query against publicly available salary data sources matching the listing's title, industry, and approximate location. Parses the response into a structured `RateEstimate`.
 
-### RateEstimateFormatter
+### 3.4 RateEstimateFormatter
 Converts a `RateEstimate` into the canonical string `$X–$Y/hr (High|Medium|Low confidence) — Source: <name>` and attaches it to the listing.
 
 ---
@@ -75,7 +78,41 @@ The orchestrator checks each listing. If a rate is already present, it skips to 
 
 ---
 
-## 6. Security Considerations
+## 6. API Contracts
+
+This module is invoked automatically by the Job Search Orchestrator (Feature 05) after the deduplication pass and before the dated export is written. It is not a standalone script.
+
+**PowerShell function signatures:**
+
+```powershell
+function Invoke-CompensationResearch {
+    param (
+        [Parameter(Mandatory)] [JobListing[]] $Listings
+    )
+    # Returns: [JobListing[]] with RateEstimate populated for unrated listings
+    # Throws: never — failed research is recorded as "No data found" on the listing
+}
+
+function Test-ExplicitRate {
+    param (
+        [Parameter(Mandatory)] [string] $RateField,
+        [string] $DescriptionBody = ""
+    )
+    # Returns: [bool] — true if an explicit compensation figure is found
+}
+```
+
+**Caching:** Rate estimates are cached in `data/.rate-cache.json` keyed by `Title + Location`. Cache entries older than 30 days are re-researched on the next run. The cache file must be excluded from version control (`.gitignore`).
+
+**Output format appended to listing (L2-016 AC1–2):**
+```
+- **Rate estimate**: $X–$Y/hr (High|Medium|Low confidence) — Source: <name>
+```
+If no data: `- **Rate estimate**: No data found`
+
+---
+
+## 7. Security Considerations
 
 - No salary API credentials are stored in the repository; research queries use publicly accessible data sources only.
 - Compensation estimates are advisory; the candidate should verify before negotiating.
@@ -83,7 +120,7 @@ The orchestrator checks each listing. If a rate is already present, it skips to 
 
 ---
 
-## 7. Open Questions
+## 8. Open Questions
 
 1. Should confidence levels be derived from source type (e.g. Glassdoor = High, blog post = Low) or from sample size reported by the source?
 2. Should the research query include location if not provided in the listing — and if so, which fallback location should be assumed?

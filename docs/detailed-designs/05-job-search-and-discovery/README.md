@@ -55,6 +55,50 @@ Accepts mode flags, reads the candidate profile for keywords and location prefer
 
 **Profile inputs:** Target keywords and geographic filters are read at runtime from `config/profile.yml`. The orchestrator must not use hardcoded keyword or location values.
 
+**`config/profile.yml` schema:**
+
+```yaml
+candidate:
+  name: string                  # Full name
+  base_resume: string           # Filename of the primary base resume (e.g. focused-base.md)
+
+search:
+  keywords:                     # One or more search terms; each is searched independently
+    - string
+  location:                     # Human-readable location string passed to board search URLs
+    primary: string             # e.g. "Ottawa, ON"
+    fallback: string            # e.g. "Remote" — used when primary returns < 5 results
+  exclude_companies:            # Companies to suppress from all results
+    - string
+
+compensation:
+  target_rate_hourly: number    # Candidate's target hourly rate (used in offer evaluation)
+  target_salary_annual: number  # Candidate's target annual salary
+
+archetype_preferences:          # Optional per-archetype weight overrides for offer scoring
+  enterprise_contract:
+    technical_match_weight: number   # default 0.35
+```
+
+This file contains personal data and **must be excluded from version control** (add to `.gitignore`).
+
+**Session integrity check (L2-023):** Before executing any search or evaluation, the orchestrator validates:
+1. `content/base/<profile.candidate.base_resume>` exists — error and exit if missing
+2. The base resume was last modified within 90 days — warn and prompt to confirm if stale
+3. Profile data is read live from `config/profile.yml` at startup — no cached or hardcoded profile summary is used
+
+```powershell
+function Assert-SessionIntegrity {
+    param (
+        [Parameter(Mandatory)] [string] $ProfilePath,
+        [Parameter(Mandatory)] [string] $BaseResumePath
+    )
+    # Exits with code 1 if base resume missing
+    # Prompts to confirm if base resume > 90 days old
+    # Returns: [void] on success
+}
+```
+
 ### 3.2 Board Search Module
 
 **Responsibility:** Search general-purpose and remote-specific job boards
@@ -64,6 +108,7 @@ For each board:
 2. Navigate and extract listing elements
 3. Parse title, company, posted date, rate, and URL
 4. Mark listings older than 30 days as `[Stale]`
+5. **Per-keyword zero-match warning (L2-011 AC3):** For each configured keyword, if the board returns zero results for that keyword, emit a warning in the output file's "Warnings" section: `No results for keyword "<keyword>" on <Board>`. This is distinct from a FailedScan — the board was reachable, it simply returned no matches.
 
 **Supported board categories:**
 
@@ -94,6 +139,8 @@ For each company:
 
 Failed scans are collected and listed in the "Failed to scan" section of the output file with an error code.
 
+**No portal configured (L2-012 AC4):** Companies in the target account list with no `careerPageUrl` value are listed in a separate "No portal configured" section — distinct from "Failed to scan". This makes it clear the omission is a data gap, not a scan failure.
+
 ### 3.4 Recruiter Board Module
 
 **Responsibility:** Search opportunity pages of staffing vendors in `docs/recruiter-vendor-list.md`
@@ -107,7 +154,9 @@ Execution order: `Priority: High` vendors are searched first. Results from prior
 - Writes YAML front-matter with run metadata
 - Groups listings by source
 - Injects `[Stale]`, `[Priority Recruiter]` tags
-- Appends "Failed to scan" section if any errors occurred
+- Appends "Warnings" section for per-keyword zero-match warnings
+- Appends "No portal configured" section for companies missing a career page URL
+- Appends "Failed to scan" section for scan errors (non-200, navigation failures)
 - Writes file to `data/search-results/<YYYY-MM-DD>.md`
 
 ---

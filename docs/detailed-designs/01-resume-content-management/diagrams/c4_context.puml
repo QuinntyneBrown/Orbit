@@ -4,7 +4,7 @@
 
 title C4 Context — Resume Content Management
 
-Person(user, "Quinntyne Brown", "Job seeker who authors and maintains all resume content")
+Person(user, "Job Seeker", "Authors and maintains all resume content")
 
 System(orbit, "Orbit Content Layer", "Version-controlled Markdown files: base resumes, tailored variants, notes, and outreach content")
 

@@ -4,7 +4,7 @@
 
 title C4 Context — Application Pipeline Tracking
 
-Person(user, "Quinntyne Brown", "Job seeker who maintains and queries the application pipeline")
+Person(user, "Job Seeker", "Maintains and queries the application pipeline")
 
 System(pipeline, "Application Pipeline Tracker", "Markdown table tracking all job applications through a defined status lifecycle")
 

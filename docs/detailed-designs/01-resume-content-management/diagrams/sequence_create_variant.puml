@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Create Tailored Resume Variant
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "content/base/" as Base
 participant "content/notes/" as Notes
 participant "content/tailored/" as Tailored

@@ -105,6 +105,6 @@ When the job-search skill detects a role in `Interview` or `Offer` state, it rea
 
 | # | Question | Owner | Status |
 |---|----------|-------|--------|
-| 1 | Should story scores be persisted between runs, or always recomputed? | Quinntyne | Open |
-| 2 | What is the maximum recommended story bank size before performance degrades? | Quinntyne | Open |
-| 3 | Should stories be versioned individually (e.g. via Git tags)? | Quinntyne | Open |
+| 1 | Should story scores be persisted between runs, or always recomputed? | — | Open |
+| 2 | What is the maximum recommended story bank size before performance degrades? | — | Open |
+| 3 | Should stories be versioned individually (e.g. via Git tags)? | — | Open |

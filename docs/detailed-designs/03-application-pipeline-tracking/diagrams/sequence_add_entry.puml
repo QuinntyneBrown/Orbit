@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Add Pipeline Entry
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "build-pdf.mjs\n(Feature 02)" as Build
 participant "data/pipeline.md" as Pipeline
 participant "templates/states.yml" as States

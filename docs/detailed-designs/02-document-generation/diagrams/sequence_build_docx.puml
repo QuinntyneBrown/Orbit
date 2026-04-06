@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Build DOCX Resume
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "build-resume.ps1" as Script
 participant "Pandoc" as Pandoc
 participant "resumes/" as Output

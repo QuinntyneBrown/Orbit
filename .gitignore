@@ -17,15 +17,37 @@ __pycache__/
 .env.*
 !.env.example
 
-# Personal / sensitive data (L1-015)
+# Personal / sensitive data (L1-015, L2-024)
 data/personal/
 data/compensation/
 data/contacts/
 *.private.*
 
+# Application pipeline — contains compensation, recruiter names, negotiation notes
+data/pipeline.md
+
+# Search history and dated exports — employer intelligence data
+data/scan-history.tsv
+data/search-results/
+
+# Rate estimate cache — contains salary research keyed to role+location
+data/.rate-cache.json
+
+# Offer evaluations — contain compensation expectations and role scoring
+content/evaluations/
+
+# Outreach drafts — contain recruiter names, contact details, personalized messages
+content/outreach/
+
+# Tailored resumes — contain personal career content derived from the base resume
+content/tailored/
+
+# Candidate profile — contains compensation targets, keywords, location preferences
+config/profile.yml
+
 # Generated documents
-output/
-generated/
+resumes/
+exports/
 
 # OS
 .DS_Store

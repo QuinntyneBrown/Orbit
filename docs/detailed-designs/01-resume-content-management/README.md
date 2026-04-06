@@ -56,7 +56,7 @@ Rules:
 
 ### 3.2 Tailored Variants Store (`content/tailored/`)
 
-- One Markdown file per application, named by company and role slug.
+- One Markdown file per application, named `<company-slug>-<role-slug>.md` (lowercase, hyphens, no spaces — resolves Open Question 3).
 - Each file derives from one of the two base files; the derivation source is recorded in YAML front matter.
 - No outreach files (messages, email drafts) shall reside here.
 
@@ -132,6 +132,20 @@ This feature has no executable API surface. All contracts are enforced by file-s
 - **Front matter contract (TailoredResume):** Every tailored Markdown file must contain a YAML front matter block with at minimum: `source_base` (one of `focused-base.md` or `comprehensive-base.md`), `company`, and `role`.
 - **Notes template contract:** All files in `content/notes/` must contain headings: `## Role Snapshot`, `## Baseline Bullets`, `## Additional Bullet Bank`, `## Tailoring Angles`, `## Keyword Bank`.
 - **Outreach location contract:** No outreach message files shall exist under `content/tailored/`.
+- **Naming convention contract:** Tailored files must match the pattern `^[a-z0-9-]+-[a-z0-9-]+\.md$`.
+
+**Pre-commit hook (resolves Open Question 1):** A Git pre-commit hook at `.git/hooks/pre-commit` (or via `scripts/hooks/pre-commit`) validates:
+1. All files staged from `content/tailored/` contain the required YAML front matter fields
+2. No files staged to `content/tailored/` match known outreach name suffixes (`-linkedin-message`, `-email`, `-follow-up`)
+
+The hook exits with code `1` and a descriptive error if either check fails, blocking the commit.
+
+---
+
+## 6.1 Cross-Feature Contracts
+
+**Feature 08 → Feature 01 (Archetype-driven base resume selection):**
+When Feature 08 classifies a listing as `Enterprise Contract` and sets the `RecommendBaseResume` flag, the variant creation script (Feature 09 / `new-variant.ps1`) must default to `focused-base.md` as the source base. For all other archetypes the user is prompted to confirm the base selection. This contract ensures archetype-driven guidance surfaces at variant creation time without hardcoding it in Feature 08.
 
 ---
 

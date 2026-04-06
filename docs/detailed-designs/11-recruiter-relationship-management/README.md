@@ -110,6 +110,6 @@ The job-search skill reads the recruiter list, computes days since last contact 
 
 | # | Question | Owner | Status |
 |---|----------|-------|--------|
-| 1 | Should the quarterly review reminder be surfaced automatically, or only on manual trigger? | Quinntyne | Open |
-| 2 | Should Medium-priority recruiters have a different follow-up threshold (e.g. 180 days)? | Quinntyne | Open |
-| 3 | How should duplicate firm names (e.g. parent/subsidiary) be handled in cross-reference? | Quinntyne | Open |
+| 1 | Should the quarterly review reminder be surfaced automatically, or only on manual trigger? | — | Open |
+| 2 | Should Medium-priority recruiters have a different follow-up threshold (e.g. 180 days)? | — | Open |
+| 3 | How should duplicate firm names (e.g. parent/subsidiary) be handled in cross-reference? | — | Open |

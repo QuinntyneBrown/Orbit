@@ -43,7 +43,7 @@ Feature 04 provides a structured, scored evaluation framework for job postings w
 Responsibilities:
 - Accept `--company` and `--role` parameters
 - Copy `templates/offer-eval-template.md` to the target path
-- Open the file for editing (via `$EDITOR` or VS Code)
+- Open the file for editing via VS Code (`code <path>`); falls back to `notepad.exe` if `code` is not on PATH
 - After editing, invoke the score computation module
 - Call the save/archive module to persist the result
 - Update the pipeline tracker with the report link
@@ -81,8 +81,12 @@ Responsibilities:
 | Score | Label | Recommended Action |
 |-------|-------|--------------------|
 | ≥ 4.5 | Priority | Tailor |
-| 3.0–4.4 | Viable | Review |
+| 3.0–4.4 | Viable | Watch |
 | < 3.0 | Low Fit | Skip |
+
+> **Note:** `Watch` replaces `Review` to align with L2-009 AC2. `Tailor`, `Watch`, and `Skip` are the only three permitted recommended-action values.
+
+**Missing dimension handling (L2-010 AC4):** If any of the five weighted dimensions has no rating in the evaluation file (field absent or empty), `Compute-OfferScore` must exit with a non-zero code and print an error identifying the missing dimension by name. It must not default missing dimensions to 0 or Skip silently.
 
 ### 3.3 Evaluation Template
 
@@ -141,7 +145,7 @@ Represents a completed evaluation artifact. Persisted as a Markdown file with YA
 | `compensationFairness` | Rating | A / B / C / Skip |
 | `marketDemand` | Rating | A / B / C / Skip |
 | `notes` | string | Free-text notes per dimension |
-| `score` | number | Computed composite score 1.0–5.0 |
+| `score` | number | Computed composite score 0.0–5.0 (0.0 only when all five dimensions are rated `Skip`) |
 | `label` | string | Priority / Viable / Low Fit |
 | `recommendedAction` | string | Tailor / Review / Skip |
 
@@ -211,6 +215,7 @@ function Compute-OfferScore {
         [Parameter(Mandatory)] [string] $EvalFilePath
     )
     # Returns: [PSCustomObject] @{ Score; Label; RecommendedAction }
+    # Throws: if any of the five weighted dimensions is absent or empty in $EvalFilePath
 }
 
 # Archive and save
@@ -258,7 +263,7 @@ function Update-PipelineLink {
 
 | # | Question | Status |
 |---|----------|--------|
-| 1 | Should the Score Computer support custom weight overrides via a config file? | Open |
-| 2 | Should `Skip`-rated dimensions be excluded from the weighted average rather than scoring 0? | Open |
-| 3 | Should pipeline tracker updates use a dedicated PowerShell module or inline logic? | Open |
+| 1 | Should the Score Computer support custom weight overrides via `config/profile.yml`? | Open |
+| 2 | Should `Skip`-rated dimensions be excluded from the weighted average rather than scoring 0? | **Resolved: No.** A `Skip` rating is a deliberate user choice meaning "I am not evaluating this" and should be treated as 0 contribution to the score. This is distinct from a *missing* dimension (absent front-matter field), which is an error per L2-010 AC4. |
+| 3 | Should pipeline tracker updates use a dedicated PowerShell module or inline logic? | **Resolved: Dedicated module** (`Update-PipelineLink` as designed in Section 3.5) to keep `Invoke-OfferEvaluation.ps1` focused and testable. |
 | 4 | Should archived evaluations be listed in the pipeline with an `[Archived]` tag? | Open |

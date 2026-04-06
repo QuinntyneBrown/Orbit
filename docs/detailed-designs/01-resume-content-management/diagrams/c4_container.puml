@@ -4,7 +4,7 @@
 
 title C4 Container — Resume Content Management
 
-Person(user, "Quinntyne Brown", "Job seeker")
+Person(user, "Job Seeker", "Job seeker")
 
 System_Boundary(orbit, "Orbit Content Layer") {
     Container(base, "Base Resume Store", "Filesystem / Markdown", "content/base/ — two canonical base resume files")

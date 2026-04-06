@@ -6,14 +6,14 @@ title Sequence — Create a Single Resume Variant (new-variant.ps1)
 
 actor Candidate
 participant "new-variant.ps1" as Script
-participant "content/base/\nquinntyne-brown.md" as Base
+participant "content/base/\nbase-resume.md" as Base
 participant "templates/\nnotes-template.md" as Template
-participant "content/tailored/\nquinntyne-brown-<slug>.md" as Variant
+participant "content/tailored/\nresume-<slug>.md" as Variant
 participant "content/notes/\n<slug>.md" as Notes
 
 Candidate -> Script : Invoke: new-variant.ps1 -Name <slug>
 
-Script -> Script : Resolve output path:\ncontent/tailored/quinntyne-brown-<slug>.md
+Script -> Script : Resolve output path:\ncontent/tailored/resume-<slug>.md
 
 Script -> Variant : Check if file exists
 Variant --> Script : Exists? (true/false)

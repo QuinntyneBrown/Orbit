@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Update Application Status
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "data/pipeline.md" as Pipeline
 participant "templates/states.yml" as States
 

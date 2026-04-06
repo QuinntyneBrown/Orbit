@@ -44,16 +44,36 @@ Unknown postings default to `Enterprise Contract` with `[Archetype: inferred]` f
 
 ## 3. Component Details
 
-### ArchetypeClassificationOrchestrator
+### 3.1 ArchetypeClassificationOrchestrator
+
+**Module:** `scripts/modules/Invoke-ArchetypeClassification.psm1`
+
 Iterates the post-deduplication result set and dispatches each listing to the classifier. Stores the archetype and any flags back onto the listing record.
 
-### ArchetypeClassifier
+### 3.2 ArchetypeClassifier
 Applies a prioritised keyword rule set against the listing title, company name, and description body. Returns an `ArchetypeResult` containing the matched archetype and a boolean `isInferred` flag.
 
-### ArchetypeRuleSet
+### 3.3 ArchetypeRuleSet
+
+**Config file:** `config/archetype-rules.json` (resolves Open Question 1)
+
 Configuration data: an ordered list of archetype rules, each containing a set of keyword patterns and a target archetype. Evaluated in priority order; first match wins.
 
-### ArchetypeFlagHandler
+**Priority order and example rules:**
+
+The evaluation order is fixed and intentional — `Government / Public Sector` is checked first because it carries a mandatory security clearance flag that must never be suppressed by another archetype (resolves Open Question 2):
+
+| Priority | Archetype | Example keyword patterns |
+|----------|-----------|--------------------------|
+| 1 | `Government / Public Sector` | `federal`, `provincial`, `municipal`, `crown`, `public sector`, `government`, `dnd`, `cra`, `gc.ca`, `security clearance` |
+| 2 | `AI / Innovation` | `ai`, `ml`, `machine learning`, `llm`, `genai`, `generative ai`, `deep learning`, `r&d`, `research engineer` |
+| 3 | `Consulting Firm` | `consulting`, `advisory`, `professional services`, `accenture`, `deloitte`, `kpmg`, `mckinsey`, `agency` |
+| 4 | `Product Company` | `saas`, `isv`, `product engineering`, `platform`, `startup`, `series`, `b2b software` |
+| 5 | `Enterprise Contract` | `staff augmentation`, `contract-to-hire`, `t&m`, `body shop`, `staffing`, *(default fallback)* |
+
+Multi-signal listings (e.g., a government AI contract) are assigned the highest-priority matching archetype (`Government / Public Sector`). The `[Archetype: inferred]` flag is only set when no rule matches and the default fallback fires.
+
+### 3.4 ArchetypeFlagHandler
 Post-processes the classified listing to apply archetype-specific side effects: recommending the base resume for `Enterprise Contract`, adding a security clearance flag for `Government / Public Sector`, and appending `[Archetype: inferred]` when no rule matched.
 
 ---
@@ -87,7 +107,53 @@ Each listing passes through the classifier, which evaluates rules in priority or
 
 ---
 
-## 6. Security Considerations
+## 6. API Contracts
+
+This module is invoked automatically by the Job Search Orchestrator (Feature 05) after deduplication and before the dated export is written.
+
+**PowerShell function signatures:**
+
+```powershell
+function Invoke-ArchetypeClassification {
+    param (
+        [Parameter(Mandatory)] [JobListing[]] $Listings
+    )
+    # Returns: [JobListing[]] with Archetype and ArchetypeFlags populated on each listing
+}
+
+function Get-Archetype {
+    param (
+        [Parameter(Mandatory)] [string] $Title,
+        [Parameter(Mandatory)] [string] $Company,
+        [string] $Description = ""
+    )
+    # Returns: [ArchetypeResult] @{ Archetype; IsInferred }
+    # Loads rules from config/archetype-rules.json on first call (cached for session)
+}
+```
+
+**Rule file schema (`config/archetype-rules.json`):**
+
+```json
+[
+  {
+    "priority": 1,
+    "archetype": "Government / Public Sector",
+    "patterns": ["federal", "provincial", "crown", "security clearance"]
+  },
+  {
+    "priority": 2,
+    "archetype": "AI / Innovation",
+    "patterns": ["ai", "ml", "machine learning", "genai"]
+  }
+]
+```
+
+Rules are evaluated in ascending `priority` order. Patterns are matched case-insensitively against the concatenated `title + company + description` string.
+
+---
+
+## 7. Security Considerations
 
 - The `Government / Public Sector` archetype triggers a clearance flag, ensuring the candidate does not omit clearance references from applications to those roles.
 - Classification rules are stored in plaintext configuration; they do not contain sensitive data.
@@ -95,7 +161,7 @@ Each listing passes through the classifier, which evaluates rules in priority or
 
 ---
 
-## 7. Open Questions
+## 8. Open Questions
 
 1. Should the rule set be stored in a dedicated `config/archetype-rules.json` file to allow updates without touching scripts?
 2. How should multi-signal listings be handled — e.g. a government AI contract that matches both `AI / Innovation` and `Government / Public Sector`?

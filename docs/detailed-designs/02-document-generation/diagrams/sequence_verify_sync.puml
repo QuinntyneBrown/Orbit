@@ -4,10 +4,10 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Verify Base Resume Sync
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "verify-sync.ps1" as Script
-participant "quinntyne-brown.md" as Focused
-participant "quinntyne-brown-full.md" as Full
+participant "base-resume.md" as Focused
+participant "base-resume-full.md" as Full
 
 User -> Script : Invoke verify-sync.ps1
 Script -> Focused : Read base focused resume

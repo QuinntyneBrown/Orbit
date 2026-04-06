@@ -34,22 +34,22 @@ Feature 06 provides persistent job search history with intelligent deduplication
 
 ## 3. Component Details
 
-### HistoryStore
+### 3.1 HistoryStore
 Manages all read/write operations against `data/scan-history.tsv`. Responsible for creating the file on first run, appending new records, and enforcing the status-protection rule (never overwrite `Applied`).
 
-### DeduplicationEngine
+### 3.2 DeduplicationEngine
 Compares an incoming result set against existing history records. Uses a normalised `Company + Title` key. Returns three buckets: `New`, `Seen`, and `Applied` (pass-through).
 
-### DiffGenerator
+### 3.3 DiffGenerator
 Loads the two most recent dated export files (or signals first-run) and computes:
 - Net-new listings (present in current, absent in previous)
 - Removed listings (present in previous, absent in current)
 - Status-changed listings (same key, different status)
 
-### DatedExportWriter
+### 3.4 DatedExportWriter
 Serialises the current result set with its diff summary to `data/search-results/YYYY-MM-DD.md`. After writing, prunes any files beyond the 8-file rolling window.
 
-### RollingWindowManager
+### 3.5 RollingWindowManager
 Enumerates files matching `data/search-results/*.md`, sorts by name (ISO date), and deletes the oldest when count exceeds 8.
 
 ---
@@ -60,7 +60,26 @@ Enumerates files matching `data/search-results/*.md`, sorts by name (ISO date), 
 
 ![Class Diagram](diagrams/class_diagram.png)
 
-### 4.2 Entity Descriptions
+### 4.2 TSV Schema
+
+`data/scan-history.tsv` header row (tab-separated, created on first run):
+
+```
+Date\tTitle\tCompany\tBoard\tURL\tStatus
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `Date` | `YYYY-MM-DD` | Date the listing was first seen |
+| `Title` | string | Job title (normalized: lowercase, trimmed) |
+| `Company` | string | Company name (normalized: lowercase, trimmed) |
+| `Board` | string | Source board, portal, or recruiter name |
+| `URL` | string | Direct URL to the listing |
+| `Status` | `New` \| `Seen` \| `Applied` | Deduplication status; `Applied` is user-set and write-protected |
+
+The composite deduplication key is `Company + Title` (both normalized). `URL` and `Board` are not part of the key — a listing that moves boards is treated as a `Seen` match if the key exists (open question Q3/Q4).
+
+### 4.3 Entity Descriptions
 
 | Entity | Description |
 |---|---|
@@ -95,7 +114,36 @@ After each search run, the `SearchOrchestrator` passes raw results to `HistorySt
 
 ---
 
-## 6. Security Considerations
+## 6. API Contracts
+
+This feature is invoked automatically by the Job Search Orchestrator (Feature 05) — it is not a standalone script. The orchestrator calls the persistence pipeline in the following order after each search run:
+
+```
+SearchOrchestrator
+  → HistoryStore.Persist(results)        # dedup + TSV append
+  → DiffGenerator.Compute()             # compare last two exports
+  → DatedExportWriter.Write(results, diff) # write dated Markdown file
+  → RollingWindowManager.Prune()        # delete oldest if count > 8
+```
+
+**HistoryStore module functions (PowerShell):**
+
+```powershell
+function Invoke-HistoryPersist {
+    param (
+        [Parameter(Mandatory)] [SearchResult[]] $Results
+    )
+    # Returns: [DeduplicationResult] @{ New; Seen; Applied }
+}
+```
+
+**File contracts:**
+- `data/scan-history.tsv` — created on first run with header row; never deleted by automation
+- `data/search-results/<YYYY-MM-DD>.md` — written once per run; overwritten if same date is run twice on the same day
+
+---
+
+## 7. Security Considerations
 
 - The TSV and dated exports may contain personal job-search data; the repository should remain private.
 - No credentials or API tokens are stored in history files.
@@ -103,9 +151,9 @@ After each search run, the `SearchOrchestrator` passes raw results to `HistorySt
 
 ---
 
-## 7. Open Questions
+## 8. Open Questions
 
-1. Should `scan-history.tsv` be excluded from version control to avoid leaking employer intelligence in a public fork?
-2. Is 8 the right rolling-window size, or should it be configurable via a setting in `config.json`?
-3. How should URL changes for the same Company+Title be handled — treated as a new listing or as a status change?
-4. Should the diff header distinguish between truly removed listings and listings that moved boards (same title, different URL)?
+1. Should `scan-history.tsv` be excluded from version control to avoid leaking employer intelligence in a public fork? **Resolved: Yes.** `data/scan-history.tsv` is added to `.gitignore`. It contains employer intelligence (boards searched, companies targeted) that must not appear in public forks. The user may choose to commit it in a private repo.
+2. Is 8 the right rolling-window size, or should it be configurable? **Resolved: Configurable.** The rolling window size is read from `config/search-settings.json` key `resultHistoryWindow` (default: `8`). This avoids magic numbers in code.
+3. How should URL changes for the same Company+Title be handled — treated as a new listing or as a status change? Open — current implementation treats it as `Seen` (key match wins). Recommend surfacing URL changes in the diff as a note.
+4. Should the diff header distinguish between truly removed listings and listings that moved boards (same title, different URL)? Open — tied to Q3 resolution.

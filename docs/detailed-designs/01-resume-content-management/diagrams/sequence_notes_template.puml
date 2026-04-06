@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Create Notes File from Template
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "templates/\nnotes-template.md" as Template
 participant "content/notes/" as Notes
 

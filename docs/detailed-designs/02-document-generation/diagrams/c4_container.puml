@@ -4,7 +4,7 @@
 
 title C4 Container — Document Generation
 
-Person(user, "Quinntyne Brown", "Job seeker")
+Person(user, "Job Seeker", "Job seeker")
 
 System_Boundary(docgen, "Document Generation") {
     Container(buildResume, "build-resume.ps1", "PowerShell", "Converts Markdown to DOCX via Pandoc using reference.docx template")

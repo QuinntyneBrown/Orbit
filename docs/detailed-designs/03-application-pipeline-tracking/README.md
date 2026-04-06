@@ -78,7 +78,15 @@ Defines the exhaustive set of permitted status values. No value outside this lis
 
 ### 3.3 Pipeline Validator
 
+**Script:** `scripts/Validate-Pipeline.ps1`
+
 Reads `data/pipeline.md`, parses the table, extracts every `Status` cell value, and validates each against the list in `templates/states.yml`. Reports invalid values and exits with a non-zero code. Intended to run after manual edits or as a pre-commit hook.
+
+Also validates:
+- `Date` column values match `YYYY-MM-DD` format
+- `#` column values are unique and monotonically increasing
+- Status values that contain Markdown formatting or embedded dates (L2-008 AC3)
+- No blank values in required columns (`Date`, `Company`, `Role`, `Source`, `Status`)
 
 ---
 
@@ -128,7 +136,21 @@ The pipeline validator reads `data/pipeline.md` and `templates/states.yml`, pars
 
 ## 6. API Contracts
 
-The pipeline tracker has no executable API surface at this time. Automation scripts operating on the pipeline must respect the following implicit contracts:
+### `scripts/Validate-Pipeline.ps1`
+
+```
+.\scripts\Validate-Pipeline.ps1
+```
+
+No parameters. Always reads `data/pipeline.md` and `templates/states.yml` from the repository root.
+
+Exit codes: `0` = all entries valid, `1` = one or more validation failures.
+
+Output on failure: one line per invalid row, format: `Row <#>: <field> — <reason>`.
+
+---
+
+Automation scripts operating on the pipeline must respect the following implicit contracts:
 
 - **Status constraint:** The `Status` column value must exactly match one of the eight values in `templates/states.yml` (case-sensitive).
 - **Date format:** The `Date` column must use ISO 8601 format: `YYYY-MM-DD`.

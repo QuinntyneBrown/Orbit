@@ -17,6 +17,19 @@ This feature converts Markdown resume source files into professional-quality Wor
 
 ---
 
+## 1.1 Runtime Dependencies
+
+| Dependency | Minimum Version | Required By | Install |
+|------------|----------------|-------------|---------|
+| PowerShell | 7.2+ | `build-resume.ps1`, `verify-sync.ps1` | Ships with Windows 11; upgrade via `winget install Microsoft.PowerShell` |
+| Pandoc | 3.0+ | `build-resume.ps1` | `winget install JohnMacFarlane.Pandoc` |
+| Node.js | 20 LTS+ | `build-pdf.mjs` | `winget install OpenJS.NodeJS.LTS` |
+| Playwright (npm) | `@playwright/test` 1.40+ | `build-pdf.mjs` | `npm install @playwright/test` then `npx playwright install chromium` |
+
+> Playwright must download its bundled Chromium browser (`npx playwright install chromium`) after `npm install`. The system browser is **not** used — pinning Playwright's bundled Chromium version ensures reproducible PDF rendering (resolves Open Question 4).
+
+---
+
 ## 2. Architecture
 
 ### 2.1 C4 Context Diagram
@@ -41,7 +54,7 @@ Within the automation layer, the Pandoc invocation component, the Playwright ren
 
 ## 3. Component Details
 
-### 3.1 `build-resume.ps1` (Markdown to DOCX)
+### 3.1 `build-resume.ps1` (Markdown to DOCX and optional PDF)
 
 - **Inputs:** Any Markdown resume file from `content/base/` or `content/tailored/`; `templates/reference.docx`
 - **Tool:** Pandoc (must be installed and on PATH)
@@ -50,6 +63,7 @@ Within the automation layer, the Pandoc invocation component, the Playwright ren
   - If input is from `content/tailored/` → output to `resumes/tailored/`
 - **Output filename:** `<input-basename>.docx`
 - **Pandoc flags:** `--reference-doc=templates/reference.docx`
+- **`-PDF` flag (L2-004 AC2):** When `-PDF` is passed, `build-resume.ps1` generates the DOCX first, then delegates to `build-pdf.mjs` with the same input file. Both outputs are produced in a single invocation. The PDF step failure does not roll back the DOCX.
 
 ### 3.2 `scripts/build-pdf.mjs` (Markdown to PDF)
 
@@ -70,10 +84,12 @@ Within the automation layer, the Pandoc invocation component, the Playwright ren
 
 - **Inputs:** `content/base/focused-base.md` and `content/base/comprehensive-base.md`
 - **Sections compared:** Current role title, certifications list, contact details (email, phone, LinkedIn URL), dates on most recent roles
+- **Directional check (L2-006 AC4):** Content is expected to flow from comprehensive → focused (the focused resume is a subset of the comprehensive). If a key section is present in `focused-base.md` but absent in `comprehensive-base.md`, the script treats this as an error (not just a warning), because it implies the comprehensive resume is missing content it should have. The reverse (section in comprehensive but absent in focused) is expected and produces no output.
 - **Behavior:**
-  - Warns (to stderr) for each diverged section
-  - Exits with code `0` if no divergence detected
-  - Exits with code `1` if any divergence detected
+  - Warns (to stderr) for each value-level divergence between shared sections
+  - Errors (to stderr, prefixed `ERROR:`) if a section exists in focused but is absent in comprehensive
+  - Exits with code `0` if no divergence or directional violation detected
+  - Exits with code `1` if any divergence or directional violation detected
 - **Usage:** Intended to run as a pre-build check or CI step before generating outputs
 
 ### 3.4 `templates/resume.html`
@@ -144,8 +160,9 @@ The job seeker invokes `build-pdf.mjs` with a Markdown file path. The script con
 | Parameter | Required | Description |
 |---|---|---|
 | `-InputFile` | Yes | Path to the Markdown resume file |
+| `-PDF` | No | Also produce a PDF via `build-pdf.mjs` after DOCX generation |
 
-Exit codes: `0` = success, `1` = Pandoc not found or conversion failed.
+Exit codes: `0` = success, `1` = Pandoc not found, missing template, or conversion failed.
 
 ### `scripts/build-pdf.mjs`
 
@@ -184,7 +201,7 @@ Exit codes: `0` = no divergence, `1` = one or more sections diverged.
 
 | # | Question | Status |
 |---|---|---|
-| 1 | Should `build-resume.ps1` and `build-pdf.mjs` be combined into a single entry point script? | Open |
-| 2 | Should `verify-sync.ps1` run automatically before every DOCX/PDF build? | Open |
-| 3 | Which specific fields in `resume.html` define page margins for print? Should these be configurable via CLI flags? | Open |
-| 4 | Should Playwright use a fixed Chromium version pinned via `@playwright/test` or the system browser? | Open |
+| 1 | Should `build-resume.ps1` and `build-pdf.mjs` be combined into a single entry point script? | **Resolved:** `build-resume.ps1` accepts `-PDF` to produce both outputs (Section 3.1). `build-pdf.mjs` remains standalone for PDF-only use. |
+| 2 | Should `verify-sync.ps1` run automatically before every DOCX/PDF build? | **Resolved: No.** Opt-in pre-build check or CI step only. Wire to a pre-commit hook manually if desired. |
+| 3 | Which specific fields in `resume.html` define page margins for print? Should these be configurable via CLI flags? | **Resolved:** Margins in `@page { margin: 12mm 16mm }` inside `resume.html`. Not CLI-configurable — edit the template directly. |
+| 4 | Should Playwright use a fixed Chromium version pinned via `@playwright/test` or the system browser? | **Resolved:** Bundled Playwright Chromium, pinned by `@playwright/test` version in `package.json`. See Section 1.1. |

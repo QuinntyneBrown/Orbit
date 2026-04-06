@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 title Sequence — Validate Pipeline
 
-actor "Quinntyne Brown" as User
+actor "Job Seeker" as User
 participant "Pipeline Validator" as Validator
 participant "data/pipeline.md" as Pipeline
 participant "templates/states.yml" as States

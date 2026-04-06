@@ -4,7 +4,7 @@
 
 title C4 Container — Application Pipeline Tracking
 
-Person(user, "Quinntyne Brown", "Job seeker")
+Person(user, "Job Seeker", "Job seeker")
 
 System_Boundary(pipelineSys, "Application Pipeline Tracker") {
     Container(table, "data/pipeline.md", "Markdown Table", "Single source of truth for all application records with ten columns per entry")

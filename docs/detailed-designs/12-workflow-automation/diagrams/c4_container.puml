@@ -9,7 +9,7 @@ Person(candidate, "Candidate", "Invokes scripts and reviews tailored variants.")
 System_Boundary(orbit, "Orbit Career Management") {
     Container(newVariant, "new-variant.ps1", "PowerShell Script", "Creates a single tailored resume variant and optional notes file from base templates.")
     Container(batchTailor, "batch-tailor.ps1", "PowerShell Script", "Runs new-variant.ps1 + tailoring prompt for multiple roles in parallel (max 4 jobs).")
-    Container(baseResume, "Base Resume", "Markdown File", "content/base/quinntyne-brown.md — canonical source for all variants.")
+    Container(baseResume, "Base Resume", "Markdown File", "content/base/base-resume.md — canonical source for all variants.")
     Container(notesTemplate, "Notes Template", "Markdown File", "templates/notes-template.md — scaffold for role-specific notes.")
     Container(tailoredContent, "Tailored Variants", "Markdown Files", "content/tailored/ — generated role-specific resume variants.")
     Container(notesContent, "Role Notes", "Markdown Files", "content/notes/ — generated role-specific notes files.")

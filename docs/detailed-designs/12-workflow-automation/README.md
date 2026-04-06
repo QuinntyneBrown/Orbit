@@ -9,7 +9,7 @@ Feature 12 automates multi-step workflows to reduce manual effort during high-vo
 | ID | Requirement |
 |----|-------------|
 | L1-012 | Automate variant creation, batch tailoring, document build, and base resume sync verification. Support parallel execution during high-volume search. |
-| L2-021 | `new-variant.ps1 -Name <slug>` creates `content/tailored/quinntyne-brown-<name>.md` from base file. `-Notes` flag creates `content/notes/<name>.md` from template. Warns before overwriting. |
+| L2-021 | `new-variant.ps1 -Name <slug>` creates `content/tailored/resume-<name>.md` from base file. `-Notes` flag creates `content/notes/<name>.md` from template. Warns before overwriting. |
 | L2-022 | `scripts/batch-tailor.ps1` accepts list of role names, runs `new-variant.ps1` and a Claude Code tailoring prompt for each role in parallel (max 4 concurrent jobs). Reports succeeded, failed, total elapsed time. |
 
 **Out of scope:** Automated PDF upload, ATS submission, AI-only unreviewed tailoring.
@@ -44,9 +44,9 @@ Two PowerShell scripts (`new-variant.ps1`, `batch-tailor.ps1`) orchestrate file 
 
 - **Parameters:** `-Name <slug>` (required), `-Notes` (switch), `-Force` (switch to suppress overwrite warning).
 - **Behavior:**
-  1. Resolves output path: `content/tailored/quinntyne-brown-<slug>.md`.
+  1. Resolves output path: `content/tailored/resume-<slug>.md`.
   2. If output file exists and `-Force` not set: prompt user for confirmation before overwriting.
-  3. Copies `content/base/quinntyne-brown.md` to the resolved path.
+  3. Copies `content/base/base-resume.md` to the resolved path.
   4. If `-Notes` set: copies `templates/notes-template.md` to `content/notes/<slug>.md`.
 - **Exit codes:** `0` success, `1` user-cancelled overwrite, `2` source file missing.
 
@@ -64,7 +64,7 @@ Two PowerShell scripts (`new-variant.ps1`, `batch-tailor.ps1`) orchestrate file 
 ### Templates
 
 - `templates/notes-template.md` — scaffold for role-specific notes with placeholder sections.
-- `content/base/quinntyne-brown.md` — canonical base resume; read-only during batch operations.
+- `content/base/base-resume.md` — canonical base resume; read-only during batch operations.
 
 ---
 
@@ -115,6 +115,6 @@ Two PowerShell scripts (`new-variant.ps1`, `batch-tailor.ps1`) orchestrate file 
 
 | # | Question | Owner | Status |
 |---|----------|-------|--------|
-| 1 | Should `batch-tailor.ps1` support a dry-run mode that lists what would be created without writing files? | Quinntyne | Open |
-| 2 | Should failed jobs automatically retry once, or require manual re-run? | Quinntyne | Open |
-| 3 | Is `-MaxJobs 4` the right ceiling for local machine performance, or should it be configurable via `config/profile.yml`? | Quinntyne | Open |
+| 1 | Should `batch-tailor.ps1` support a dry-run mode that lists what would be created without writing files? | — | Open |
+| 2 | Should failed jobs automatically retry once, or require manual re-run? | — | Open |
+| 3 | Is `-MaxJobs 4` the right ceiling for local machine performance, or should it be configurable via `config/profile.yml`? | — | Open |

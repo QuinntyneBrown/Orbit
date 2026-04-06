@@ -6,7 +6,7 @@ title Sequence — Startup Environment Validation
 
 actor Candidate
 participant "job-search Skill" as Skill
-participant "content/base/\nquinntyne-brown.md" as BaseResume
+participant "content/base/\nbase-resume.md" as BaseResume
 
 Candidate -> Skill : Invoke skill
 

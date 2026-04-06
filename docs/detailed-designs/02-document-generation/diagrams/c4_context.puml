@@ -4,7 +4,7 @@
 
 title C4 Context — Document Generation
 
-Person(user, "Quinntyne Brown", "Job seeker who triggers document builds")
+Person(user, "Job Seeker", "Triggers document builds")
 
 System(docgen, "Document Generation", "Converts Markdown resume files to DOCX and PDF outputs")
 
