@@ -52,21 +52,20 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
 
 function Parse-Rating {
     param([string]$Content, [string]$DimensionLabel)
-    # Match lines like: Rating: A  or  Rating: [ A / B / C / Skip ]  with A highlighted
-    if ($Content -match "(?m)^\*\*$([regex]::Escape($DimensionLabel))\*\*.*?\nRating:\s*([ABCabcSkipskip]+)") {
-        return $matches[1].Trim()
-    }
-    # Also match simpler inline: Rating: A
-    $pattern = "(?s)\*\*$([regex]::Escape($DimensionLabel))\*\*.*?Rating:\s*\[?\s*([A-Ca-cSkipskip]+)"
-    if ($Content -match $pattern) {
+    # Use (?s) dotall so .*? crosses the description line between the heading and Rating:.
+    # Template structure (multi-line):
+    #   **Technical Match** (35% weight)
+    #   Does the role match your core technical skills and stack?
+    #   Rating: A          ← user fills in A / B / C / Skip
+    $escaped = [regex]::Escape($DimensionLabel)
+    if ($Content -match "(?s)\*\*$escaped\*\*.*?Rating:\s*\[?\s*([A-Ca-c]|[Ss]kip)") {
         $val = $matches[1].Trim()
-        # Normalise
-        if ($val -match '^[Aa]$') { return 'A' }
-        if ($val -match '^[Bb]$') { return 'B' }
-        if ($val -match '^[Cc]$') { return 'C' }
-        if ($val -imatch '^skip$') { return 'Skip' }
+        if ($val -match '^[Aa]$')    { return 'A' }
+        if ($val -match '^[Bb]$')    { return 'B' }
+        if ($val -match '^[Cc]$')    { return 'C' }
+        if ($val -imatch '^skip$')   { return 'Skip' }
     }
-    throw "Could not parse rating for dimension '$DimensionLabel' from the evaluation form"
+    throw "Could not parse rating for dimension '$DimensionLabel' — ensure the form has 'Rating: A' (or B / C / Skip) under the dimension heading"
 }
 
 $newId = $null

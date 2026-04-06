@@ -16,12 +16,12 @@ $notesOut        = Join-Path $repoRoot "content\notes\$Name.md"
 
 # Validate slug format
 if ($Name -notmatch '^[a-z0-9-]+$') {
-    Write-Error "Name must be lowercase letters, numbers, and hyphens only: '$Name'"
+    [Console]::Error.WriteLine("ERROR: Name must be lowercase letters, numbers, and hyphens only: '$Name'")
     exit 1
 }
 
 if (-not (Test-Path $sourceBase)) {
-    Write-Error "Base resume not found: $sourceBase"
+    [Console]::Error.WriteLine("ERROR: Base resume not found: $sourceBase")
     exit 2
 }
 

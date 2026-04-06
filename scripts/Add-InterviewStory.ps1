@@ -44,8 +44,9 @@ if (-not $Keywords) {
     if ($kwInput) { $Keywords = $kwInput -split ',' | ForEach-Object { $_.Trim() } }
 }
 
-$skillsJson  = $Skills  | ConvertTo-Json -Compress
-$keywordsJson= $Keywords | ConvertTo-Json -Compress
+# ConvertTo-Json -InputObject avoids the PS7 gotcha where @() | ConvertTo-Json returns "null"
+$skillsJson   = ConvertTo-Json -InputObject @($Skills)   -Compress
+$keywordsJson = ConvertTo-Json -InputObject @($Keywords) -Compress
 
 Invoke-SqliteQuery -DataSource $dbPath -Query @"
 INSERT INTO interview_stories
