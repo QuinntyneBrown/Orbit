@@ -2,6 +2,8 @@
 $ErrorActionPreference = 'Stop'
 
 $script:RuleCache = $null
+$script:DefaultDbPath = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot '..\..\data\orbit.db'))
 
 function Get-Archetype {
     param(
@@ -24,7 +26,12 @@ function Get-Archetype {
 
     foreach ($rule in $script:RuleCache) {
         foreach ($pattern in $rule.patterns) {
-            if ($haystack.Contains($pattern.ToLower())) {
+            # Use word-boundary regex (not substring Contains) to avoid false positives —
+            # e.g. "ai" must not match "mail", "paid", "email"; "ml" must not match "xml".
+            # Trim the pattern first to strip any trailing spaces used in the config for
+            # disambiguation (e.g. "ey ") — \b provides cleaner boundary enforcement.
+            $escaped = [regex]::Escape($pattern.ToLower().Trim())
+            if ($haystack -match "\b$escaped\b") {
                 return [PSCustomObject]@{
                     Archetype  = $rule.archetype
                     IsInferred = $false
@@ -43,8 +50,9 @@ function Get-Archetype {
 function Invoke-ArchetypeClassification {
     param(
         [Parameter(Mandatory)][array]  $Listings,
-        [string] $DbPath = ''
+        [string] $DbPath = $script:DefaultDbPath
     )
+    Import-Module PSSQLite -ErrorAction Stop
 
     foreach ($listing in $Listings) {
         $result = Get-Archetype -Title $listing.Title -Company $listing.Company -Description ($listing.Description ?? '')
@@ -57,6 +65,24 @@ function Invoke-ArchetypeClassification {
         }
         if ($result.Archetype -eq 'Enterprise Contract') {
             $listing.RecommendedBase = 'focused-base.md'
+        }
+
+        # Persist classification back to job_listings. Use normalised company+title
+        # (same key used by the dedup upsert) to locate the row.
+        if ($DbPath -and (Test-Path $DbPath)) {
+            $company = $listing.Company.ToLower().Trim()
+            $title   = $listing.Title.ToLower().Trim()
+            Invoke-SqliteQuery -DataSource $DbPath -Query @"
+UPDATE job_listings
+SET archetype          = @archetype,
+    archetype_inferred = @inferred
+WHERE company = @company AND title = @title
+"@ -SqlParameters @{
+                archetype = $result.Archetype
+                inferred  = [int]$result.IsInferred
+                company   = $company
+                title     = $title
+            }
         }
     }
 
