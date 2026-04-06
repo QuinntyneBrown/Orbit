@@ -92,6 +92,11 @@ function Add-PipelineEntry {
         [string]$DbPath = $script:DefaultDbPath
     )
 
+    $validStatuses = @('Evaluated','Applied','Responded','Interview','Offer','Rejected','Discarded','SKIP')
+    if ($Status -notin $validStatuses) {
+        throw "Invalid status '$Status'. Must be one of: $($validStatuses -join ', ')"
+    }
+
     # Use a single shared connection so last_insert_rowid() reflects this INSERT,
     # not a prior operation on a different connection.
     $conn = New-SQLiteConnection -DataSource $DbPath

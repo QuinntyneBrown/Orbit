@@ -22,8 +22,10 @@ $gitStatus = git -C $repoRoot status --porcelain 2>&1
 
 $violations = @()
 foreach ($path in $protectedPaths) {
+    # Anchor on word boundaries so that e.g. data/orbit.db does not match
+    # data/orbit.db-wal — both are in the list but are distinct protected paths.
     $escaped = [regex]::Escape($path.TrimEnd('/'))
-    if ($gitStatus -match $escaped) {
+    if ($gitStatus -match "(^|\s)$escaped(/|\s|$)") {
         $violations += $path
     }
 }

@@ -16,6 +16,15 @@ function Add-RecruiterContact {
         [string] $Notes,
         [string] $DbPath = $script:DefaultDbPath
     )
+    $validTiers    = @('High','Medium','Low')
+    $validStatuses = @('Active','Passive','Dormant','Closed')
+    if ($PriorityTier -notin $validTiers) {
+        throw "Invalid PriorityTier '$PriorityTier'. Must be one of: $($validTiers -join ', ')"
+    }
+    if ($EngagementStatus -notin $validStatuses) {
+        throw "Invalid EngagementStatus '$EngagementStatus'. Must be one of: $($validStatuses -join ', ')"
+    }
+
     Import-Module PSSQLite -ErrorAction Stop
     $conn = New-SQLiteConnection -DataSource $DbPath
     try {
@@ -103,6 +112,15 @@ function Add-TargetAccount {
         [string] $Notes,
         [string] $DbPath = $script:DefaultDbPath
     )
+    $validPriorities = @('High','Medium','Low')
+    $validAtsTypes   = @('Greenhouse','Ashby','Lever','Wellfound','Workable')
+    if ($Priority -notin $validPriorities) {
+        throw "Invalid Priority '$Priority'. Must be one of: $($validPriorities -join ', ')"
+    }
+    if ($AtsType -and $AtsType -notin $validAtsTypes) {
+        throw "Invalid AtsType '$AtsType'. Must be one of: $($validAtsTypes -join ', ')"
+    }
+
     Import-Module PSSQLite -ErrorAction Stop
     $conn = New-SQLiteConnection -DataSource $DbPath
     try {
